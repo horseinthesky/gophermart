@@ -5,7 +5,13 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"time"
+)
+
+var (
+	UserExists = errors.New(`user exists`)
+	UserDoesNotExist = errors.New(`user does not exist`)
 )
 
 type Status int
@@ -26,9 +32,12 @@ func (s Status) MarshalJSON() ([]byte, error) {
 }
 
 type User struct {
-	Name     string `json:"login" db:"name"`
-	Password string `json:"password"`
-	Passhash string `db:"passhash"`
+	Id        int
+	Name      string `json:"login" db:"name"`
+	Password  string `json:"password" db:"-"`
+	Passhash  string `db:"passhash"`
+	Current   float64
+	Withdrawn float64
 }
 
 func (u *User) HashPassword() {
@@ -51,14 +60,15 @@ type (
 	}
 
 	Withdraw struct {
-		Order string  `json:"order" db:"id"`
-		Sum   float64 `jso:"sum"`
+		Order string  `json:"order" db:"orderid"`
+		Sum   float64 `json:"sum"`
 	}
 
 	Storage interface {
 		Init(context.Context) error
 		Check(context.Context) error
-		CreateUser(context.Context, User) error
+		CreateUser(context.Context, User) (User, error)
+		GetUser(context.Context, User) (User, error)
 		Close()
 	}
 )

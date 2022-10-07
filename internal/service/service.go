@@ -1,4 +1,4 @@
-package internal
+package service
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"gophermart/internal/storage"
+	"gophermart/internal/service/storage"
 )
 
 type (
@@ -27,14 +27,12 @@ type (
 )
 
 func New(cfg Config) (*Service, error) {
-	router := chi.NewRouter()
-
 	db, err := storage.NewDB(cfg.DatabaseURI)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Service{router, db, sync.WaitGroup{}}, nil
+	return &Service{nil, db, sync.WaitGroup{}}, nil
 }
 
 func (s *Service) Run(ctx context.Context) {
@@ -45,7 +43,8 @@ func (s *Service) Run(ctx context.Context) {
 		log.Fatalf("failed to init DB: %s", err)
 	}
 
-	log.Println(fmt.Errorf("server crashed due to %w", http.ListenAndServe("localhost:8080", s.router)))
+	log.Println("Gophermart server started at: bla")
+	log.Println(fmt.Errorf("server crashed due to %w", http.ListenAndServe("localhost:8000", s.router)))
 }
 
 func (s *Service) Stop() {

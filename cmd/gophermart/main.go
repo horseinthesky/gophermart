@@ -7,19 +7,19 @@ import (
 	"syscall"
 	"log"
 
-	"gophermart/internal"
+	"gophermart/internal/service"
 )
 
 func main() {
-	service, err := internal.New(internal.Config{DatabaseURI: "user=postgres port=5432 sslmode=disable"})
+	service, err := service.New(service.Config{DatabaseURI: "user=postgres port=5432 sslmode=disable"})
 	if err != nil {
 		log.Println(err)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	service.Run(ctx)
+	go service.Run(ctx)
 
-	term := make(chan os.Signal)
+	term := make(chan os.Signal, 1)
 	signal.Notify(term, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 
 	sig := <-term
