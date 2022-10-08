@@ -77,6 +77,7 @@ func (d *DB) Close() {
 
 func (d *DB) CreateUser(ctx context.Context, user User) (User, error) {
 	existingUser := User{}
+
 	err := d.conn.GetContext(ctx, &existingUser, `SELECT * FROM users WHERE name=$1`, user.Name)
 	if err == nil {
 		return User{}, ErrUserExists
@@ -95,6 +96,7 @@ func (d *DB) CreateUser(ctx context.Context, user User) (User, error) {
 
 func (d *DB) GetUserByName(ctx context.Context, user User) (User, error) {
 	existingUser := User{}
+
 	err := d.conn.GetContext(ctx, &existingUser, `SELECT * FROM users WHERE name=$1 AND passhash=$2`, user.Name, user.Passhash)
 	if err != nil {
 		return User{}, ErrUserDoesNotExist
@@ -105,6 +107,7 @@ func (d *DB) GetUserByName(ctx context.Context, user User) (User, error) {
 
 func (d *DB) GetUserByID(ctx context.Context, userID int) (User, error) {
 	user := User{}
+
 	err := d.conn.GetContext(ctx, &user, `SELECT * FROM users WHERE id=$1`, userID)
 	if err != nil {
 		return User{}, ErrUserDoesNotExist
@@ -115,6 +118,7 @@ func (d *DB) GetUserByID(ctx context.Context, userID int) (User, error) {
 
 func (d *DB) SaveOrder(ctx context.Context, order Order) error {
 	existingOrder := Order{}
+
 	err := d.conn.GetContext(ctx, &existingOrder, `SELECT * FROM orders WHERE number=$1`, order.Number)
 	if err == nil {
 		if existingOrder.UserID == order.UserID {
@@ -136,6 +140,7 @@ func (d *DB) SaveOrder(ctx context.Context, order Order) error {
 
 func (d *DB) GetOrders(ctx context.Context, userID int) ([]Order, error) {
 	orders := []Order{}
+
 	err := d.conn.SelectContext(ctx, &orders, "SELECT * FROM orders WHERE userid=$1", userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get orders")
@@ -146,6 +151,7 @@ func (d *DB) GetOrders(ctx context.Context, userID int) ([]Order, error) {
 
 func (d *DB) GetUserBalance(ctx context.Context, userID int) (Balance, error) {
 	user := User{}
+
 	err := d.conn.GetContext(ctx, &user, `SELECT * FROM users WHERE id=$1`, userID)
 	if err != nil {
 		return Balance{}, fmt.Errorf("failed to get user balance")

@@ -150,6 +150,7 @@ func (s *Service) handleNewOrder() http.HandlerFunc {
 			return
 		}
 
+		w.WriteHeader(http.StatusAccepted)
 		w.Write([]byte(`order registered`))
 	})
 }
@@ -157,7 +158,7 @@ func (s *Service) handleNewOrder() http.HandlerFunc {
 func (s *Service) handleOrders() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userIDString, _ := r.Cookie("secret_id")
-		userID, err := strconv.Atoi(userIDString.Value)
+		userID, _ := strconv.Atoi(userIDString.Value)
 
 		orders, err := s.db.GetOrders(r.Context(), userID)
 		if err != nil {
@@ -187,7 +188,7 @@ func (s *Service) handleOrders() http.HandlerFunc {
 func (s *Service) handleBalance() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userIDString, _ := r.Cookie("secret_id")
-		userID, err := strconv.Atoi(userIDString.Value)
+		userID, _ := strconv.Atoi(userIDString.Value)
 
 		balance, err := s.db.GetUserBalance(r.Context(), userID)
 		if err != nil {
