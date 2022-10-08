@@ -10,10 +10,13 @@ import (
 )
 
 var (
-	ErrUserExists                          = errors.New(`user exists`)
-	ErrUserDoesNotExist                    = errors.New(`user does not exist`)
+	ErrUserExists       = errors.New(`user exists`)
+	ErrUserDoesNotExist = errors.New(`user does not exist`)
+
 	ErrOrderAlreadyRegisteredByUser        = errors.New(`order already registered by user`)
 	ErrOrderAlreadyRegisteredBySomeoneElse = errors.New(`order already registered by other user`)
+
+	ErrNotEnoughPoints = errors.New(`user balance is too low`)
 )
 
 type Status int
@@ -63,35 +66,30 @@ type (
 		UploadedAt time.Time `json:"uploaded_at" db:"uploaded_at"`
 	}
 
-	Withdraw struct {
+	Withdrawal struct {
+		ID          int    `json:"-"`
+		UserID      int    `json:"-"`
 		Order       string `db:"orderid"`
 		Sum         float64
-		ProcessedAt time.Time `db:"processed_at"`
+		ProcessedAt time.Time `json:"processed_at" db:"processed_at"`
 	}
 
 	Storage interface {
 		Init(context.Context) error
 		Check(context.Context) error
+
 		CreateUser(context.Context, User) (User, error)
 		GetUserByName(context.Context, User) (User, error)
 		GetUserByID(context.Context, int) (User, error)
+
 		SaveOrder(context.Context, Order) error
 		GetOrders(context.Context, int) ([]Order, error)
+
 		GetUserBalance(context.Context, int) (Balance, error)
+
+		SaveWithdrawal(context.Context, Withdrawal) error
+		GetWithdrawals(context.Context, int) ([]Withdrawal, error)
+
 		Close()
 	}
 )
-
-type OrderByDate []Order
-
-func (o OrderByDate) Len() int {
-	return len(o)
-}
-
-func (o OrderByDate) Less(i, j int) bool {
-	return o[i].UploadedAt.Before(o[j].UploadedAt)
-}
-
-func (o OrderByDate) Swap(i, j int) {
-	o[i], o[j] = o[j], o[i]
-}

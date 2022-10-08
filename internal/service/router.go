@@ -29,6 +29,8 @@ func (s *Service) setupRouter() {
 
 			r.Route("/balance", func(r chi.Router) {
 				r.Get("/", s.handleBalance())
+				r.Post("/withdraw", s.handleWithdrawal())
+				r.Get("/withdrawals", s.handleWithdrawals())
 			})
 		})
 	})

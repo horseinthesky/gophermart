@@ -43,11 +43,11 @@ func (d *DB) Init(ctx context.Context) error {
 		)
 	`
 
-	withdrawnTable := `
-		CREATE TABLE IF NOT EXISTS withdrawns (
+	withdrawalsTable := `
+		CREATE TABLE IF NOT EXISTS withdrawals (
 			id serial PRIMARY KEY,
 			userid integer NOT NULL,
-			orderid integer NOT NULL,
+			orderid text NOT NULL,
 			sum double precision NOT NULL,
 			processed_at timestamptz NOT NULL
 		)
@@ -62,7 +62,7 @@ func (d *DB) Init(ctx context.Context) error {
 
 	tx.ExecContext(ctx, usersTable)
 	tx.ExecContext(ctx, ordersTable)
-	tx.ExecContext(ctx, withdrawnTable)
+	tx.ExecContext(ctx, withdrawalsTable)
 
 	return tx.Commit()
 }
@@ -161,4 +161,40 @@ func (d *DB) GetUserBalance(ctx context.Context, userID int) (Balance, error) {
 		Current:   user.Current,
 		Withdrawn: user.Withdrawn,
 	}, nil
+}
+
+func (d *DB) SaveWithdrawal(ctx context.Context, withdrawal Withdrawal) error {
+	user := User{}
+
+	err := d.conn.GetContext(ctx, &user, `SELECT * FROM users WHERE id=$1`, withdrawal.UserID)
+	if err != nil {
+		return fmt.Errorf("failed to get user to withdraw from")
+	}
+
+	if user.Current < withdrawal.Sum {
+		return ErrNotEnoughPoints
+	}
+
+	_, err = d.conn.NamedExecContext(ctx, `UPDATE users SET current = users.current - :sum, withdrawn = users.withdrawn + :sum WHERE id = :userid`, withdrawal)
+	if err != nil {
+		return fmt.Errorf("failed to update user balance: %w", err)
+	}
+
+	_, err = d.conn.NamedExecContext(ctx, `INSERT INTO withdrawals (userid, orderid, sum, processed_at) VALUES (:userid, :orderid, :sum, :processed_at)`, withdrawal)
+	if err != nil {
+		return fmt.Errorf("failed to insert new withdraw: %w", err)
+	}
+
+	return nil
+}
+
+func (d *DB) GetWithdrawals(ctx context.Context, userID int) ([]Withdrawal, error) {
+	withdrawals := []Withdrawal{}
+
+	err := d.conn.SelectContext(ctx, &withdrawals, "SELECT * FROM withdrawals WHERE userid=$1", userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get withdrawals")
+	}
+
+	return withdrawals, nil
 }

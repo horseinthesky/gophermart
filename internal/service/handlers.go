@@ -205,3 +205,72 @@ func (s *Service) handleBalance() http.HandlerFunc {
 		w.Write([]byte(res))
 	})
 }
+
+func (s *Service) handleWithdrawal() http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		userIDString, _ := r.Cookie("secret_id")
+		userID, _ := strconv.Atoi(userIDString.Value)
+
+		withdrawal := storage.Withdrawal{}
+		err := json.NewDecoder(r.Body).Decode(&withdrawal)
+		if err != nil {
+			http.Error(w, `{"error": "bad or no payload"}`, http.StatusBadRequest)
+			return
+		}
+
+		withdrawal.UserID = userID
+		withdrawal.ProcessedAt = time.Now()
+
+		orderNum, _ := strconv.Atoi(withdrawal.Order)
+
+		if !luhn.Valid(orderNum) {
+			http.Error(w, "Order number has wrong format.", http.StatusUnprocessableEntity)
+			return
+		}
+
+		err = s.db.SaveWithdrawal(r.Context(), withdrawal)
+		if err != nil {
+			if errors.Is(err, storage.ErrNotEnoughPoints) {
+				w.WriteHeader(http.StatusPaymentRequired)
+				w.Write([]byte(`{"status": "error", "message": "not enough points to withdraw"}`))
+				return
+			}
+
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`{"status": "error", "message": "failed to withdraw"}`))
+			return
+		}
+
+		w.Write([]byte(`{"status": "success", "message": "withdrawal registered"}`))
+	})
+}
+
+func (s *Service) handleWithdrawals() http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		userIDString, _ := r.Cookie("secret_id")
+		userID, _ := strconv.Atoi(userIDString.Value)
+
+		withdrawals, err := s.db.GetWithdrawals(r.Context(), userID)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`{"status": "error", "message": "failed to get withdrawals"}`))
+			return
+		}
+
+		if len(withdrawals) == 0 {
+			w.WriteHeader(http.StatusNoContent)
+			w.Write([]byte(`{"status": "error", "message": "no withdrawals found"}`))
+			return
+		}
+
+		sort.Sort(storage.WithdrawalsByDate(withdrawals))
+
+		res, err := json.Marshal(withdrawals)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`{"status": "error", "message": "failed to marshal withdrawals"}`))
+		}
+
+		w.Write([]byte(res))
+	})
+}
