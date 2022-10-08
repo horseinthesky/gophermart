@@ -22,10 +22,14 @@ func (s *Service) setupRouter() {
 		r.Post("/login", s.handleLogin())
 
 		r.Group(func(r chi.Router) {
-			r.Use(loginRequired)
+			r.Use(s.loginRequired)
 
 			r.Post("/orders", s.handleNewOrder())
 			r.Get("/orders", s.handleOrders())
+
+			r.Route("/balance", func(r chi.Router) {
+				r.Get("/", s.handleBalance())
+			})
 		})
 	})
 

@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -62,16 +63,31 @@ func handleGzip(next http.Handler) http.Handler {
 	})
 }
 
-func loginRequired(next http.Handler) http.Handler {
+func (s *Service) loginRequired(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
 
-		_, err := r.Cookie("secret_id")
+		userIDString, err := r.Cookie("secret_id")
 		if err != nil {
 			w.WriteHeader(http.StatusUnauthorized)
 			w.Write([]byte(`{"status": "error", "message": "not authenticated"}`))
 			return
 		}
+
+		userID, err := strconv.Atoi(userIDString.Value)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(`{"status": "error", "message": "invalid secret_id"}`))
+			return
+		}
+
+		_, err = s.db.GetUserBalance(r.Context(), userID)
+		if err != nil {
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte(`{"status": "error", "message": "not authenticated"}`))
+			return
+		}
+
 		next.ServeHTTP(w, r)
 	})
 }

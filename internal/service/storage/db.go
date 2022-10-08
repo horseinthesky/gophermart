@@ -93,7 +93,7 @@ func (d *DB) CreateUser(ctx context.Context, user User) (User, error) {
 	return registeredUser, err
 }
 
-func (d *DB) GetUser(ctx context.Context, user User) (User, error) {
+func (d *DB) GetUserByName(ctx context.Context, user User) (User, error) {
 	existingUser := User{}
 	err := d.conn.GetContext(ctx, &existingUser, `SELECT * FROM users WHERE name=$1 AND passhash=$2`, user.Name, user.Passhash)
 	if err != nil {
@@ -101,6 +101,16 @@ func (d *DB) GetUser(ctx context.Context, user User) (User, error) {
 	}
 
 	return existingUser, nil
+}
+
+func (d *DB) GetUserByID(ctx context.Context, userID int) (User, error) {
+	user := User{}
+	err := d.conn.GetContext(ctx, &user, `SELECT * FROM users WHERE id=$1`, userID)
+	if err != nil {
+		return User{}, ErrUserDoesNotExist
+	}
+
+	return user, nil
 }
 
 func (d *DB) SaveOrder(ctx context.Context, order Order) error {
@@ -126,10 +136,23 @@ func (d *DB) SaveOrder(ctx context.Context, order Order) error {
 
 func (d *DB) GetOrders(ctx context.Context, userID int) ([]Order, error) {
 	orders := []Order{}
-	err := d.conn.Select(&orders, "SELECT * FROM orders WHERE userid=$1", userID)
+	err := d.conn.SelectContext(ctx, &orders, "SELECT * FROM orders WHERE userid=$1", userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get orders")
 	}
 
 	return orders, nil
+}
+
+func (d *DB) GetUserBalance(ctx context.Context, userID int) (Balance, error) {
+	user := User{}
+	err := d.conn.GetContext(ctx, &user, `SELECT * FROM users WHERE id=$1`, userID)
+	if err != nil {
+		return Balance{}, fmt.Errorf("failed to get user balance")
+	}
+
+	return Balance{
+		Current:   user.Current,
+		Withdrawn: user.Withdrawn,
+	}, nil
 }

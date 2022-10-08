@@ -81,7 +81,7 @@ func (s *Service) handleLogin() http.HandlerFunc {
 
 		user.HashPassword()
 
-		registeredUser, err := s.db.GetUser(r.Context(), user)
+		registeredUser, err := s.db.GetUserByName(r.Context(), user)
 		if errors.Is(err, storage.ErrUserDoesNotExist) {
 			w.WriteHeader(http.StatusUnauthorized)
 			w.Write([]byte(`{"status": "error", "message": "login/password does not exists"}`))
@@ -178,6 +178,27 @@ func (s *Service) handleOrders() http.HandlerFunc {
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(`{"status": "error", "message": "failed to marshal orders"}`))
+		}
+
+		w.Write([]byte(res))
+	})
+}
+
+func (s *Service) handleBalance() http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		userIDString, _ := r.Cookie("secret_id")
+		userID, err := strconv.Atoi(userIDString.Value)
+
+		balance, err := s.db.GetUserBalance(r.Context(), userID)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`{"status": "error", "message": "failed to get balance"}`))
+		}
+
+		res, err := json.Marshal(balance)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`{"status": "error", "message": "failed to marshal balance"}`))
 		}
 
 		w.Write([]byte(res))

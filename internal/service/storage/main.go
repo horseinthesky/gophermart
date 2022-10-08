@@ -73,9 +73,11 @@ type (
 		Init(context.Context) error
 		Check(context.Context) error
 		CreateUser(context.Context, User) (User, error)
-		GetUser(context.Context, User) (User, error)
+		GetUserByName(context.Context, User) (User, error)
+		GetUserByID(context.Context, int) (User, error)
 		SaveOrder(context.Context, Order) error
 		GetOrders(context.Context, int) ([]Order, error)
+		GetUserBalance(context.Context, int) (Balance, error)
 		Close()
 	}
 )
