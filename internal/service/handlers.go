@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -112,9 +113,9 @@ func (s *Service) handleNewOrder() http.HandlerFunc {
 			return
 		}
 
-		orderString := strings.TrimSuffix(string(body), "\n")
+		orderNumberString := strings.TrimSuffix(string(body), "\n")
 
-		orderNum, err := strconv.Atoi(orderString)
+		orderNum, err := strconv.Atoi(orderNumberString)
 		if err != nil {
 			http.Error(w, "Order number is incorrect", http.StatusBadRequest)
 			return
@@ -125,12 +126,12 @@ func (s *Service) handleNewOrder() http.HandlerFunc {
 			return
 		}
 
-		userIDValue, _ := r.Cookie("secret_id")
-		userID, err := strconv.Atoi(userIDValue.Value)
+		userIDString, _ := r.Cookie("secret_id")
+		userID, _ := strconv.Atoi(userIDString.Value)
 
 		newOrder := storage.Order{
-			UserID: userID,
-			Number: orderString,
+			UserID:     userID,
+			Number:     orderNumberString,
 			UploadedAt: uploadedAt,
 		}
 
@@ -150,5 +151,35 @@ func (s *Service) handleNewOrder() http.HandlerFunc {
 		}
 
 		w.Write([]byte(`order registered`))
+	})
+}
+
+func (s *Service) handleOrders() http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		userIDString, _ := r.Cookie("secret_id")
+		userID, err := strconv.Atoi(userIDString.Value)
+
+		orders, err := s.db.GetOrders(r.Context(), userID)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`{"status": "error", "message": "failed to get orders"}`))
+			return
+		}
+
+		if len(orders) == 0 {
+			w.WriteHeader(http.StatusNoContent)
+			w.Write([]byte(`{"status": "error", "message": "no orders found"}`))
+			return
+		}
+
+		sort.Sort(storage.OrderByDate(orders))
+
+		res, err := json.Marshal(orders)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`{"status": "error", "message": "failed to marshal orders"}`))
+		}
+
+		w.Write([]byte(res))
 	})
 }

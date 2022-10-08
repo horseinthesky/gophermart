@@ -55,12 +55,12 @@ type (
 	}
 
 	Order struct {
-		ID         int
-		UserID     int
+		ID         int `json:"-"`
+		UserID     int `json:"-"`
 		Number     string
 		Status     Status
-		Accrual    float64
-		UploadedAt time.Time `db:"uploaded_at"`
+		Accrual    float64   `json:",omitempty"`
+		UploadedAt time.Time `json:"uploaded_at" db:"uploaded_at"`
 	}
 
 	Withdraw struct {
@@ -75,6 +75,21 @@ type (
 		CreateUser(context.Context, User) (User, error)
 		GetUser(context.Context, User) (User, error)
 		SaveOrder(context.Context, Order) error
+		GetOrders(context.Context, int) ([]Order, error)
 		Close()
 	}
 )
+
+type OrderByDate []Order
+
+func (o OrderByDate) Len() int {
+	return len(o)
+}
+
+func (o OrderByDate) Less(i, j int) bool {
+	return o[i].UploadedAt.Before(o[j].UploadedAt)
+}
+
+func (o OrderByDate) Swap(i, j int) {
+	o[i], o[j] = o[j], o[i]
+}

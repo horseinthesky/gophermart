@@ -25,6 +25,7 @@ func (s *Service) setupRouter() {
 			r.Use(loginRequired)
 
 			r.Post("/orders", s.handleNewOrder())
+			r.Get("/orders", s.handleOrders())
 		})
 	})
 

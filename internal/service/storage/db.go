@@ -123,3 +123,13 @@ func (d *DB) SaveOrder(ctx context.Context, order Order) error {
 
 	return nil
 }
+
+func (d *DB) GetOrders(ctx context.Context, userID int) ([]Order, error) {
+	orders := []Order{}
+	err := d.conn.Select(&orders, "SELECT * FROM orders WHERE userid=$1", userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get orders")
+	}
+
+	return orders, nil
+}
