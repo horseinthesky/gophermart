@@ -22,7 +22,7 @@ func NewDB(uri string) (Storage, error) {
 }
 
 func (d *DB) Init(ctx context.Context) error {
-	users_schema := `
+	usersTable := `
 		CREATE TABLE IF NOT EXISTS users (
 			id serial PRIMARY KEY,
 			name text NOT NULL,
@@ -32,7 +32,7 @@ func (d *DB) Init(ctx context.Context) error {
 		)
 	`
 
-	orders_schema := `
+	ordersTable := `
 		CREATE TABLE IF NOT EXISTS orders (
 			id serial PRIMARY KEY,
 			userid integer NOT NULL,
@@ -42,7 +42,7 @@ func (d *DB) Init(ctx context.Context) error {
 		)
 	`
 
-	withdrawns_schema := `
+	withdrawnTable := `
 		CREATE TABLE IF NOT EXISTS withdrawns (
 			id serial PRIMARY KEY,
 			userid integer NOT NULL,
@@ -59,9 +59,9 @@ func (d *DB) Init(ctx context.Context) error {
 
 	defer tx.Rollback()
 
-	tx.ExecContext(ctx, users_schema)
-	tx.ExecContext(ctx, orders_schema)
-	tx.ExecContext(ctx, withdrawns_schema)
+	tx.ExecContext(ctx, usersTable)
+	tx.ExecContext(ctx, ordersTable)
+	tx.ExecContext(ctx, withdrawnTable)
 
 	return tx.Commit()
 }
@@ -78,6 +78,9 @@ func (d *DB) CreateUser(ctx context.Context, user User) (User, error) {
 	}
 
 	_, err = d.conn.NamedExec(`INSERT INTO users (name, passhash) VALUES (:name, :passhash)`, user)
+	if err != nil {
+		return User{}, fmt.Errorf("failed to insert new user: %w", err)
+	}
 
 	registeredUser := User{}
 	err = d.conn.Get(&registeredUser, `SELECT * FROM users WHERE name=$1`, user.Name)
