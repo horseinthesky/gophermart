@@ -24,6 +24,7 @@ func getConfig() service.Config {
 	flag.StringVar(&cfg.RunAddress, "a", cfg.RunAddress, "Socket to listen on")
 	flag.StringVar(&cfg.DatabaseURI, "d", cfg.DatabaseURI, "Database URI")
 	flag.StringVar(&cfg.AccrualAddress, "r", cfg.AccrualAddress, "Accrual system address")
+	flag.BoolVar(&cfg.Debug, "D", false, "Debug mode")
 	flag.Parse()
 
 	return cfg

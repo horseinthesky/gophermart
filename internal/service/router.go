@@ -13,10 +13,19 @@ func (s *Service) setupRouter() {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(handleGzip)
+	if s.config.Debug {
+		r.Use(logRequest)
+	}
 
 	r.Route("/api/user", func(r chi.Router) {
 		r.Post("/register", s.handleRegister())
 		r.Post("/login", s.handleLogin())
+
+		r.Group(func(r chi.Router) {
+			r.Use(loginRequired)
+
+			r.Post("/orders", s.handleNewOrder())
+		})
 	})
 
 	s.router = r

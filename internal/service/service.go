@@ -17,6 +17,7 @@ type (
 		RunAddress     string `env:"RUN_ADDRESS" envDefault:"localhost:8000"`
 		DatabaseURI    string `env:"DATABASE_URI" envDefault:"postgresql://postgres@localhost:5432?sslmode=disable"`
 		AccrualAddress string `env:"ACCRUAL_SYSTEM_ADDRESS" envDefault:"localhost:8080"`
+		Debug          bool
 	}
 
 	Service struct {
@@ -44,7 +45,7 @@ func (s *Service) Run(ctx context.Context) {
 		log.Fatalf("failed to init DB: %s", err)
 	}
 
-	log.Printf("gophermart server started at: %s", s.config.RunAddress)
+	log.Printf("gophermart server started at: %s; debug=%v", s.config.RunAddress, s.config.Debug)
 	log.Println(fmt.Errorf("server crashed due to %w", http.ListenAndServe(s.config.RunAddress, s.router)))
 }
 

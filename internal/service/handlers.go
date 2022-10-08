@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 
@@ -88,5 +89,19 @@ func (s *Service) handleLogin() http.HandlerFunc {
 			})
 
 		w.Write([]byte(`{"status": "success", "message": "authenticated"}`))
+	})
+}
+
+func (s *Service) handleNewOrder() http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, `failed to read payload`, http.StatusInternalServerError)
+			return
+		}
+
+		fmt.Println(string(body))
+
+		w.Write([]byte(`order accepted`))
 	})
 }
