@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	UserExists = errors.New(`user exists`)
-	UserDoesNotExist = errors.New(`user does not exist`)
+	ErrUserExists       = errors.New(`user exists`)
+	ErrUserDoesNotExist = errors.New(`user does not exist`)
 )
 
 type Status int
@@ -32,10 +32,10 @@ func (s Status) MarshalJSON() ([]byte, error) {
 }
 
 type User struct {
-	Id        int
-	Name      string `json:"login" db:"name"`
-	Password  string `json:"password" db:"-"`
-	Passhash  string `db:"passhash"`
+	ID        int
+	Name      string `json:"login"`
+	Password  string
+	Passhash  string
 	Current   float64
 	Withdrawn float64
 }
@@ -48,20 +48,22 @@ func (u *User) HashPassword() {
 
 type (
 	Balance struct {
-		Current   float64 `json:"current"`
-		Withdrawn float64 `json:"withdrawn"`
+		Current   float64
+		Withdrawn float64
 	}
 
 	Order struct {
-		Number     string    `json:"number" db:"id"`
-		Status     Status    `json:"status"`
-		Accrual    float64   `json:"accrual"`
-		UploadedAt time.Time `json:"uploaded_at"`
+		ID         int
+		Number     string
+		Status     Status
+		Accrual    float64
+		UploadedAt time.Time `db:"uploaded_at"`
 	}
 
 	Withdraw struct {
-		Order string  `json:"order" db:"orderid"`
-		Sum   float64 `json:"sum"`
+		Order       string `db:"orderid"`
+		Sum         float64
+		ProcessedAt time.Time `db:"processed_at"`
 	}
 
 	Storage interface {

@@ -74,7 +74,7 @@ func (d *DB) CreateUser(ctx context.Context, user User) (User, error) {
 	existingUser := User{}
 	err := d.conn.GetContext(ctx, &existingUser, `SELECT * FROM users WHERE name=$1`, user.Name)
 	if err == nil {
-		return User{}, UserExists
+		return User{}, ErrUserExists
 	}
 
 	_, err = d.conn.NamedExec(`INSERT INTO users (name, passhash) VALUES (:name, :passhash)`, user)
@@ -89,7 +89,7 @@ func (d *DB) GetUser(ctx context.Context, user User) (User, error) {
 	existingUser := User{}
 	err := d.conn.GetContext(ctx, &existingUser, `SELECT * FROM users WHERE name=$1 AND passhash=$2`, user.Name, user.Passhash)
 	if err != nil {
-		return User{}, UserDoesNotExist
+		return User{}, ErrUserDoesNotExist
 	}
 
 	return existingUser, nil

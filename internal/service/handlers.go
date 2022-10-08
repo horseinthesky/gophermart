@@ -33,7 +33,7 @@ func (s *Service) handleRegister() http.HandlerFunc {
 		user.HashPassword()
 
 		registeredUser, err := s.db.CreateUser(r.Context(), user)
-		if errors.Is(err, storage.UserExists) {
+		if errors.Is(err, storage.ErrUserExists) {
 			w.WriteHeader(http.StatusConflict)
 			w.Write([]byte(`{"status": "error", "message": "user already exists"}`))
 			return
@@ -47,7 +47,7 @@ func (s *Service) handleRegister() http.HandlerFunc {
 		http.SetCookie(w,
 			&http.Cookie{
 				Name:  "secret_id",
-				Value: fmt.Sprint(registeredUser.Id),
+				Value: fmt.Sprint(registeredUser.ID),
 			})
 
 		w.Write([]byte(`{"status": "success", "message": "authenticated"}`))
@@ -76,7 +76,7 @@ func (s *Service) handleLogin() http.HandlerFunc {
 		user.HashPassword()
 
 		registeredUser, err := s.db.GetUser(r.Context(), user)
-		if errors.Is(err, storage.UserDoesNotExist) {
+		if errors.Is(err, storage.ErrUserDoesNotExist) {
 			w.WriteHeader(http.StatusUnauthorized)
 			w.Write([]byte(`{"status": "error", "message": "login/password does not exists"}`))
 			return
@@ -85,7 +85,7 @@ func (s *Service) handleLogin() http.HandlerFunc {
 		http.SetCookie(w,
 			&http.Cookie{
 				Name:  "secret_id",
-				Value: fmt.Sprint(registeredUser.Id),
+				Value: fmt.Sprint(registeredUser.ID),
 			})
 
 		w.Write([]byte(`{"status": "success", "message": "authenticated"}`))
