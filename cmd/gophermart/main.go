@@ -2,16 +2,37 @@ package main
 
 import (
 	"context"
+	"flag"
+	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
-	"log"
 
 	"gophermart/internal/service"
+
+	"github.com/caarlos0/env"
 )
 
+func getConfig() service.Config {
+	cfg := service.Config{}
+
+	if err := env.Parse(&cfg); err != nil {
+		log.Fatal(fmt.Errorf("failed to parse env vars: %w", err))
+	}
+
+	flag.StringVar(&cfg.RunAddress, "a", cfg.RunAddress, "Socket to listen on")
+	flag.StringVar(&cfg.DatabaseURI, "d", cfg.DatabaseURI, "Database URI")
+	flag.StringVar(&cfg.AccrualAddress, "r", cfg.AccrualAddress, "Accrual system address")
+	flag.Parse()
+
+	return cfg
+}
+
 func main() {
-	service, err := service.New(service.Config{DatabaseURI: "user=postgres port=5432 sslmode=disable"})
+	// service, err := service.New(service.Config{DatabaseURI: "user=postgres sslmode=disable"})
+	cfg := getConfig()
+	service, err := service.New(cfg)
 	if err != nil {
 		log.Println(err)
 	}
