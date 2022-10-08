@@ -10,8 +10,10 @@ import (
 )
 
 var (
-	ErrUserExists       = errors.New(`user exists`)
-	ErrUserDoesNotExist = errors.New(`user does not exist`)
+	ErrUserExists                          = errors.New(`user exists`)
+	ErrUserDoesNotExist                    = errors.New(`user does not exist`)
+	ErrOrderAlreadyRegisteredByUser        = errors.New(`order already registered by user`)
+	ErrOrderAlreadyRegisteredBySomeoneElse = errors.New(`order already registered by other user`)
 )
 
 type Status int
@@ -54,6 +56,7 @@ type (
 
 	Order struct {
 		ID         int
+		UserID     int
 		Number     string
 		Status     Status
 		Accrual    float64
@@ -71,6 +74,7 @@ type (
 		Check(context.Context) error
 		CreateUser(context.Context, User) (User, error)
 		GetUser(context.Context, User) (User, error)
+		SaveOrder(context.Context, Order) error
 		Close()
 	}
 )

@@ -36,8 +36,9 @@ func (d *DB) Init(ctx context.Context) error {
 		CREATE TABLE IF NOT EXISTS orders (
 			id serial PRIMARY KEY,
 			userid integer NOT NULL,
-			status integer NOT NULL,
-			accrual double precision,
+			number text NOT NULL,
+			status int NOT NULL,
+			accrual double precision DEFAULT 0,
 			uploaded_at timestamptz NOT NULL
 		)
 	`
@@ -70,6 +71,10 @@ func (d *DB) Check(ctx context.Context) error {
 	return d.conn.PingContext(ctx)
 }
 
+func (d *DB) Close() {
+	d.conn.Close()
+}
+
 func (d *DB) CreateUser(ctx context.Context, user User) (User, error) {
 	existingUser := User{}
 	err := d.conn.GetContext(ctx, &existingUser, `SELECT * FROM users WHERE name=$1`, user.Name)
@@ -77,13 +82,13 @@ func (d *DB) CreateUser(ctx context.Context, user User) (User, error) {
 		return User{}, ErrUserExists
 	}
 
-	_, err = d.conn.NamedExec(`INSERT INTO users (name, passhash) VALUES (:name, :passhash)`, user)
+	_, err = d.conn.NamedExecContext(ctx, `INSERT INTO users (name, passhash) VALUES (:name, :passhash)`, user)
 	if err != nil {
 		return User{}, fmt.Errorf("failed to insert new user: %w", err)
 	}
 
 	registeredUser := User{}
-	err = d.conn.Get(&registeredUser, `SELECT * FROM users WHERE name=$1`, user.Name)
+	err = d.conn.GetContext(ctx, &registeredUser, `SELECT * FROM users WHERE name=$1`, user.Name)
 
 	return registeredUser, err
 }
@@ -98,6 +103,23 @@ func (d *DB) GetUser(ctx context.Context, user User) (User, error) {
 	return existingUser, nil
 }
 
-func (d *DB) Close() {
-	d.conn.Close()
+func (d *DB) SaveOrder(ctx context.Context, order Order) error {
+	existingOrder := Order{}
+	err := d.conn.GetContext(ctx, &existingOrder, `SELECT * FROM orders WHERE number=$1`, order.Number)
+	if err == nil {
+		if existingOrder.UserID == order.UserID {
+			return ErrOrderAlreadyRegisteredByUser
+		}
+
+		if existingOrder.UserID != order.UserID {
+			return ErrOrderAlreadyRegisteredBySomeoneElse
+		}
+	}
+
+	_, err = d.conn.NamedExecContext(ctx, `INSERT INTO orders (userid, number, status, uploaded_at) VALUES (:userid, :number, :status, :uploaded_at)`, order)
+	if err != nil {
+		return fmt.Errorf("failed to insert new order: %w", err)
+	}
+
+	return nil
 }

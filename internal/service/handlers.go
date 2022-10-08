@@ -7,8 +7,13 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"strconv"
+	"strings"
+	"time"
 
 	"gophermart/internal/service/storage"
+
+	"github.com/theplant/luhn"
 )
 
 func (s *Service) handleRegister() http.HandlerFunc {
@@ -94,14 +99,56 @@ func (s *Service) handleLogin() http.HandlerFunc {
 
 func (s *Service) handleNewOrder() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		uploadedAt := time.Now()
+
+		if r.Header.Get("Content-Type") != "text/plain" {
+			http.Error(w, `Content-Type must be "text/plain"`, http.StatusBadRequest)
+			return
+		}
+
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			http.Error(w, `failed to read payload`, http.StatusInternalServerError)
 			return
 		}
 
-		fmt.Println(string(body))
+		orderString := strings.TrimSuffix(string(body), "\n")
 
-		w.Write([]byte(`order accepted`))
+		orderNum, err := strconv.Atoi(orderString)
+		if err != nil {
+			http.Error(w, "Order number is incorrect", http.StatusBadRequest)
+			return
+		}
+
+		if !luhn.Valid(orderNum) {
+			http.Error(w, "Order number has wrong format.", http.StatusUnprocessableEntity)
+			return
+		}
+
+		userIDValue, _ := r.Cookie("secret_id")
+		userID, err := strconv.Atoi(userIDValue.Value)
+
+		newOrder := storage.Order{
+			UserID: userID,
+			Number: orderString,
+			UploadedAt: uploadedAt,
+		}
+
+		if err := s.db.SaveOrder(r.Context(), newOrder); err != nil {
+			if errors.Is(err, storage.ErrOrderAlreadyRegisteredByUser) {
+				w.Write([]byte(`order already registered by you`))
+				return
+			}
+
+			if errors.Is(err, storage.ErrOrderAlreadyRegisteredBySomeoneElse) {
+				http.Error(w, "order already rgistered by another user", http.StatusConflict)
+				return
+			}
+
+			http.Error(w, `failed to register order`, http.StatusInternalServerError)
+			return
+		}
+
+		w.Write([]byte(`order registered`))
 	})
 }
