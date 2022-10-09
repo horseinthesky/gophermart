@@ -18,17 +18,24 @@ var statusesToProcess = []storage.Status{
 }
 
 func (s *Service) processOrders(ctx context.Context) {
+	log.Println("accrual processor started")
+
 	for {
 		time.Sleep(1 * time.Second)
 
 		select {
 		case <-ctx.Done():
-			log.Println("accrual system poll successfully cancelled")
+			log.Println("accrual processor stopped")
 			return
 		default:
 			orders, err := s.db.GetOrders(ctx, statusesToProcess)
 			if err != nil {
 				log.Printf("accrual processor failed to get orders from DB: %s", err)
+				continue
+			}
+
+			if len(orders) == 0 {
+				log.Printf("accrual processor has no orders to process")
 				continue
 			}
 
