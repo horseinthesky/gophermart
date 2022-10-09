@@ -159,7 +159,7 @@ func (s *Service) handleOrders() http.HandlerFunc {
 		userIDString, _ := r.Cookie("secret_id")
 		userID, _ := strconv.Atoi(userIDString.Value)
 
-		orders, err := s.db.GetOrders(r.Context(), userID)
+		orders, err := s.db.GetUserOrders(r.Context(), userID)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(`{"status": "error", "message": "failed to get orders"}`))

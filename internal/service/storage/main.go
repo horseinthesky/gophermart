@@ -22,18 +22,44 @@ var (
 type Status int
 
 const (
-	New Status = iota
-	Processing
-	Invalid
-	Processed
+	StatusNew Status = iota
+	StatusRegistered
+	StatusProcessing
+	StatusInvalid
+	StatusProcessed
 )
 
 func (s Status) String() string {
-	return [...]string{"NEW", "PROCESSING", "INVALID", "PROCESSED"}[s]
+	return [...]string{"NEW", "REGISTERED", "PROCESSING", "INVALID", "PROCESSED"}[s]
 }
 
 func (s Status) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.String())
+}
+
+var toID = map[string]Status{
+	"NEW":        StatusNew,
+	"REGISTERED": StatusRegistered,
+	"PROCESSING": StatusProcessing,
+	"INVALID":    StatusInvalid,
+	"PROCESSED":  StatusProcessed,
+}
+
+func (s *Status) UnmarshalJSON(data []byte) error {
+	var status string
+	err := json.Unmarshal(data, &status)
+	if err != nil {
+		return err
+	}
+
+	id, ok := toID[status]
+	if !ok {
+		return errors.New("invalid value for Key")
+	}
+
+	*s = id
+
+	return nil
 }
 
 type User struct {
@@ -58,9 +84,9 @@ type (
 	}
 
 	Order struct {
-		ID         int `json:"-"`
-		UserID     int `json:"-"`
-		Number     string
+		ID         int    `json:"-"`
+		UserID     int    `json:"-"`
+		Number     string `json:"order"`
 		Status     Status
 		Accrual    float64   `json:",omitempty"`
 		UploadedAt time.Time `json:"uploaded_at" db:"uploaded_at"`
@@ -81,11 +107,12 @@ type (
 		CreateUser(context.Context, User) (User, error)
 		GetUserByName(context.Context, User) (User, error)
 		GetUserByID(context.Context, int) (User, error)
+		GetUserBalance(context.Context, int) (Balance, error)
 
 		SaveOrder(context.Context, Order) error
-		GetOrders(context.Context, int) ([]Order, error)
-
-		GetUserBalance(context.Context, int) (Balance, error)
+		UpdateOrder(context.Context, Order) error
+		GetUserOrders(context.Context, int) ([]Order, error)
+		GetOrders(context.Context, []Status) ([]Order, error)
 
 		SaveWithdrawal(context.Context, Withdrawal) error
 		GetWithdrawals(context.Context, int) ([]Withdrawal, error)

@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -24,6 +25,7 @@ type (
 		config Config
 		router *chi.Mux
 		db     storage.Storage
+		client *http.Client
 		wg     sync.WaitGroup
 	}
 )
@@ -34,7 +36,11 @@ func New(cfg Config) (*Service, error) {
 		return nil, err
 	}
 
-	return &Service{cfg, nil, db, sync.WaitGroup{}}, nil
+	client := &http.Client{
+		Timeout: 50 * time.Millisecond,
+	}
+
+	return &Service{cfg, nil, db, client, sync.WaitGroup{}}, nil
 }
 
 func (s *Service) Run(ctx context.Context) {
@@ -44,6 +50,12 @@ func (s *Service) Run(ctx context.Context) {
 	if err != nil {
 		log.Fatalf("failed to init DB: %s", err)
 	}
+
+	s.wg.Add(1)
+	go func() {
+		defer s.wg.Done()
+		s.processOrders(ctx)
+	}()
 
 	log.Printf("gophermart server started at: %s; debug=%v", s.config.RunAddress, s.config.Debug)
 	log.Println(fmt.Errorf("server crashed due to %w", http.ListenAndServe(s.config.RunAddress, s.router)))

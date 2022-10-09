@@ -138,12 +138,40 @@ func (d *DB) SaveOrder(ctx context.Context, order Order) error {
 	return nil
 }
 
-func (d *DB) GetOrders(ctx context.Context, userID int) ([]Order, error) {
+func (d *DB) UpdateOrder(ctx context.Context, order Order) error {
+	_, err := d.conn.NamedExecContext(ctx, `UPDATE orders SET status = :status, accrual = :accrual WHERE number=:number`, order)
+	if err != nil {
+		return fmt.Errorf("failed to update order: %w", err)
+	}
+
+	return nil
+}
+
+func (d *DB) GetUserOrders(ctx context.Context, userID int) ([]Order, error) {
 	orders := []Order{}
 
-	err := d.conn.SelectContext(ctx, &orders, "SELECT * FROM orders WHERE userid=$1", userID)
+	err := d.conn.SelectContext(ctx, &orders, `SELECT * FROM orders WHERE userid=$1`, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get orders")
+	}
+
+	return orders, nil
+}
+
+func (d *DB) GetOrders(ctx context.Context, statuses []Status) ([]Order, error) {
+	query, args, err := sqlx.In(`SELECT * FROM orders WHERE status IN (?);`, statuses)
+	if err != nil {
+		return nil, fmt.Errorf("failed to prepare IN query: %w", err)
+	}
+
+	// sqlx.In returns queries with the `?` bindvar, we can rebind it for our backend
+	query = d.conn.Rebind(query)
+
+	orders := []Order{}
+
+	err = d.conn.SelectContext(ctx, &orders, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get orders: %w", err)
 	}
 
 	return orders, nil
@@ -191,7 +219,7 @@ func (d *DB) SaveWithdrawal(ctx context.Context, withdrawal Withdrawal) error {
 func (d *DB) GetWithdrawals(ctx context.Context, userID int) ([]Withdrawal, error) {
 	withdrawals := []Withdrawal{}
 
-	err := d.conn.SelectContext(ctx, &withdrawals, "SELECT * FROM withdrawals WHERE userid=$1", userID)
+	err := d.conn.SelectContext(ctx, &withdrawals, `SELECT * FROM withdrawals WHERE userid=$1`, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get withdrawals")
 	}
