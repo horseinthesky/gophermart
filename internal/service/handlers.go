@@ -155,6 +155,8 @@ func (s *Service) handleNewOrder() http.HandlerFunc {
 
 func (s *Service) handleOrders() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Content-Type", "application/json")
+
 		userIDString, _ := r.Cookie("secret_id")
 		userID, _ := strconv.Atoi(userIDString.Value)
 
@@ -183,6 +185,8 @@ func (s *Service) handleOrders() http.HandlerFunc {
 
 func (s *Service) handleBalance() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Content-Type", "application/json")
+
 		userIDString, _ := r.Cookie("secret_id")
 		userID, _ := strconv.Atoi(userIDString.Value)
 
@@ -204,6 +208,8 @@ func (s *Service) handleBalance() http.HandlerFunc {
 
 func (s *Service) handleWithdrawal() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Content-Type", "application/json")
+
 		userIDString, _ := r.Cookie("secret_id")
 		userID, _ := strconv.Atoi(userIDString.Value)
 
@@ -243,6 +249,8 @@ func (s *Service) handleWithdrawal() http.HandlerFunc {
 
 func (s *Service) handleWithdrawals() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Content-Type", "application/json")
+
 		userIDString, _ := r.Cookie("secret_id")
 		userID, _ := strconv.Atoi(userIDString.Value)
 

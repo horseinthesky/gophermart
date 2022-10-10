@@ -29,12 +29,12 @@ const (
 	StatusProcessed
 )
 
-func (s Status) String() string {
-	return [...]string{"NEW", "REGISTERED", "PROCESSING", "INVALID", "PROCESSED"}[s]
-}
-
-func (s Status) MarshalJSON() ([]byte, error) {
-	return json.Marshal(s.String())
+var toString = map[Status]string{
+	StatusNew:        "NEW",
+	StatusRegistered: "REGISTERED",
+	StatusProcessing: "PROCESSING",
+	StatusInvalid:    "INVALID",
+	StatusProcessed:  "PROCESSED",
 }
 
 var toID = map[string]Status{
@@ -43,6 +43,14 @@ var toID = map[string]Status{
 	"PROCESSING": StatusProcessing,
 	"INVALID":    StatusInvalid,
 	"PROCESSED":  StatusProcessed,
+}
+
+func (s Status) String() string {
+	return toString[s]
+}
+
+func (s Status) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.String())
 }
 
 func (s *Status) UnmarshalJSON(data []byte) error {
@@ -54,7 +62,7 @@ func (s *Status) UnmarshalJSON(data []byte) error {
 
 	id, ok := toID[status]
 	if !ok {
-		return errors.New("invalid value for Key")
+		return errors.New("invalid value for key")
 	}
 
 	*s = id
