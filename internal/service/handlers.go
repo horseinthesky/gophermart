@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -159,7 +158,7 @@ func (s *Service) handleOrders() http.HandlerFunc {
 		userIDString, _ := r.Cookie("secret_id")
 		userID, _ := strconv.Atoi(userIDString.Value)
 
-		orders, err := s.db.GetUserOrders(r.Context(), userID)
+		orders, err := s.db.GetUserOrders(r.Context(), userID, "uploaded_at")
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(`{"status": "error", "message": "failed to get orders"}`))
@@ -171,8 +170,6 @@ func (s *Service) handleOrders() http.HandlerFunc {
 			w.Write([]byte(`{"status": "error", "message": "no orders found"}`))
 			return
 		}
-
-		sort.Sort(storage.OrderByDate(orders))
 
 		res, err := json.Marshal(orders)
 		if err != nil {
@@ -249,7 +246,7 @@ func (s *Service) handleWithdrawals() http.HandlerFunc {
 		userIDString, _ := r.Cookie("secret_id")
 		userID, _ := strconv.Atoi(userIDString.Value)
 
-		withdrawals, err := s.db.GetWithdrawals(r.Context(), userID)
+		withdrawals, err := s.db.GetWithdrawals(r.Context(), userID, "processed_at")
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(`{"status": "error", "message": "failed to get withdrawals"}`))
@@ -261,8 +258,6 @@ func (s *Service) handleWithdrawals() http.HandlerFunc {
 			w.Write([]byte(`{"status": "error", "message": "no withdrawals found"}`))
 			return
 		}
-
-		sort.Sort(storage.WithdrawalsByDate(withdrawals))
 
 		res, err := json.Marshal(withdrawals)
 		if err != nil {

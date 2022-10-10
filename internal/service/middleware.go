@@ -81,7 +81,7 @@ func (s *Service) loginRequired(next http.Handler) http.Handler {
 			return
 		}
 
-		_, err = s.db.GetUserBalance(r.Context(), userID)
+		_, err = s.db.GetUserByID(r.Context(), userID)
 		if err != nil {
 			w.WriteHeader(http.StatusUnauthorized)
 			w.Write([]byte(`{"status": "error", "message": "not authenticated"}`))

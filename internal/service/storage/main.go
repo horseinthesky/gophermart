@@ -111,11 +111,11 @@ type (
 
 		SaveOrder(context.Context, Order) error
 		UpdateOrder(context.Context, Order) error
-		GetUserOrders(context.Context, int) ([]Order, error)
+		GetUserOrders(context.Context, int, string) ([]Order, error)
 		GetOrders(context.Context, []Status) ([]Order, error)
 
 		SaveWithdrawal(context.Context, Withdrawal) error
-		GetWithdrawals(context.Context, int) ([]Withdrawal, error)
+		GetWithdrawals(context.Context, int, string) ([]Withdrawal, error)
 
 		Close()
 	}

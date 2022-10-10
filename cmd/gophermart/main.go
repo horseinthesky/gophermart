@@ -35,7 +35,7 @@ func main() {
 	cfg := getConfig()
 	service, err := service.New(cfg)
 	if err != nil {
-		log.Println(err)
+		log.Fatal(fmt.Errorf("failed to create gophermart service: %w", err))
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())

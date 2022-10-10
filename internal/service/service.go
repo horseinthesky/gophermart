@@ -58,7 +58,7 @@ func (s *Service) Run(ctx context.Context) {
 	}()
 
 	log.Printf("gophermart server started at: %s; debug=%v", s.config.RunAddress, s.config.Debug)
-	log.Println(fmt.Errorf("server crashed due to %w", http.ListenAndServe(s.config.RunAddress, s.router)))
+	log.Fatal(fmt.Errorf("server crashed due to: %w", http.ListenAndServe(s.config.RunAddress, s.router)))
 }
 
 func (s *Service) Stop() {

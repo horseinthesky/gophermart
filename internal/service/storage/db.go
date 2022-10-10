@@ -25,7 +25,7 @@ func (d *DB) Init(ctx context.Context) error {
 	usersTable := `
 		CREATE TABLE IF NOT EXISTS users (
 			id serial PRIMARY KEY,
-			name text NOT NULL,
+			name text NOT NULL UNIQUE,
 			passhash text NOT NULL,
 			current double precision DEFAULT 0,
 			withdrawn double precision DEFAULT 0
@@ -147,10 +147,12 @@ func (d *DB) UpdateOrder(ctx context.Context, order Order) error {
 	return nil
 }
 
-func (d *DB) GetUserOrders(ctx context.Context, userID int) ([]Order, error) {
+func (d *DB) GetUserOrders(ctx context.Context, userID int, orderField string) ([]Order, error) {
+	query := fmt.Sprintf(`SELECT * FROM orders WHERE userid=$1 ORDER BY %s`, orderField)
+
 	orders := []Order{}
 
-	err := d.conn.SelectContext(ctx, &orders, `SELECT * FROM orders WHERE userid=$1`, userID)
+	err := d.conn.SelectContext(ctx, &orders, query, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get orders")
 	}
@@ -159,12 +161,12 @@ func (d *DB) GetUserOrders(ctx context.Context, userID int) ([]Order, error) {
 }
 
 func (d *DB) GetOrders(ctx context.Context, statuses []Status) ([]Order, error) {
-	query, args, err := sqlx.In(`SELECT * FROM orders WHERE status IN (?);`, statuses)
+	// sqlx.In returns queries with the `?` bindvar, we can rebind it for our backend
+	query, args, err := sqlx.In(`SELECT * FROM orders WHERE status IN (?)`, statuses)
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare IN query: %w", err)
 	}
 
-	// sqlx.In returns queries with the `?` bindvar, we can rebind it for our backend
 	query = d.conn.Rebind(query)
 
 	orders := []Order{}
@@ -216,10 +218,11 @@ func (d *DB) SaveWithdrawal(ctx context.Context, withdrawal Withdrawal) error {
 	return nil
 }
 
-func (d *DB) GetWithdrawals(ctx context.Context, userID int) ([]Withdrawal, error) {
+func (d *DB) GetWithdrawals(ctx context.Context, userID int, orderField string) ([]Withdrawal, error) {
+	query := fmt.Sprintf(`SELECT * FROM withdrawals WHERE userid=$1 ORDER BY %s`, orderField)
 	withdrawals := []Withdrawal{}
 
-	err := d.conn.SelectContext(ctx, &withdrawals, `SELECT * FROM withdrawals WHERE userid=$1`, userID)
+	err := d.conn.SelectContext(ctx, &withdrawals, query, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get withdrawals")
 	}
