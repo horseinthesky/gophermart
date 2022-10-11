@@ -17,7 +17,7 @@ type (
 	Config struct {
 		RunAddress     string `env:"RUN_ADDRESS" envDefault:"localhost:8000"`
 		DatabaseURI    string `env:"DATABASE_URI" envDefault:"postgresql://postgres@localhost:5432?sslmode=disable"`
-		AccrualAddress string `env:"ACCRUAL_SYSTEM_ADDRESS" envDefault:"localhost:8080"`
+		AccrualAddress string `env:"ACCRUAL_SYSTEM_ADDRESS" envDefault:"http://localhost:8080"`
 		Debug          bool
 	}
 
@@ -37,7 +37,7 @@ func New(cfg Config) (*Service, error) {
 	}
 
 	client := &http.Client{
-		Timeout: 50 * time.Millisecond,
+		Timeout: 5 * time.Second,
 	}
 
 	return &Service{cfg, nil, db, client, sync.WaitGroup{}}, nil

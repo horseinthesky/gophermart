@@ -75,8 +75,8 @@ type User struct {
 	Name      string `json:"login"`
 	Password  string
 	Passhash  string
-	Current   float64
-	Withdrawn float64
+	Current   float32
+	Withdrawn float32
 }
 
 func (u *User) HashPassword() {
@@ -87,24 +87,24 @@ func (u *User) HashPassword() {
 
 type (
 	Balance struct {
-		Current   float64
-		Withdrawn float64
+		Current   float32
+		Withdrawn float32
 	}
 
 	Order struct {
-		ID         int    `json:"-"`
-		UserID     int    `json:"-"`
-		Number     string `json:"order"`
-		Status     Status
-		Accrual    float64   `json:",omitempty"`
+		ID         int       `json:"-"`
+		UserID     int       `json:"-"`
+		Number     string    `json:"number"`
+		Status     Status    `json:"status"`
+		Accrual    float32   `json:"accrual,omitempty"`
 		UploadedAt time.Time `json:"uploaded_at" db:"uploaded_at"`
 	}
 
 	Withdrawal struct {
-		ID          int    `json:"-"`
-		UserID      int    `json:"-"`
-		Order       string `db:"orderid"`
-		Sum         float64
+		ID          int       `json:"-"`
+		UserID      int       `json:"-"`
+		Order       string    `json:"order" db:"orderid"`
+		Sum         float32   `json:"sum"`
 		ProcessedAt time.Time `json:"processed_at" db:"processed_at"`
 	}
 

@@ -17,7 +17,7 @@ import (
 
 func (s *Service) handleRegister() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Content-Type", "application/json")
+		w.Header().Set("Content-Type", "application/json")
 
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
@@ -60,7 +60,7 @@ func (s *Service) handleRegister() http.HandlerFunc {
 
 func (s *Service) handleLogin() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Content-Type", "application/json")
+		w.Header().Set("Content-Type", "application/json")
 
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
@@ -155,7 +155,7 @@ func (s *Service) handleNewOrder() http.HandlerFunc {
 
 func (s *Service) handleOrders() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Content-Type", "application/json")
+		w.Header().Set("Content-Type", "application/json")
 
 		userIDString, _ := r.Cookie("secret_id")
 		userID, _ := strconv.Atoi(userIDString.Value)
@@ -167,16 +167,15 @@ func (s *Service) handleOrders() http.HandlerFunc {
 			return
 		}
 
-		if len(orders) == 0 {
-			w.WriteHeader(http.StatusNoContent)
-			w.Write([]byte(`{"status": "error", "message": "no orders found"}`))
-			return
-		}
-
 		res, err := json.Marshal(orders)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(`{"status": "error", "message": "failed to marshal orders"}`))
+			return
+		}
+
+		if len(orders) == 0 {
+			w.WriteHeader(http.StatusNoContent)
 		}
 
 		w.Write([]byte(res))
@@ -185,7 +184,7 @@ func (s *Service) handleOrders() http.HandlerFunc {
 
 func (s *Service) handleBalance() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Content-Type", "application/json")
+		w.Header().Set("Content-Type", "application/json")
 
 		userIDString, _ := r.Cookie("secret_id")
 		userID, _ := strconv.Atoi(userIDString.Value)
@@ -208,7 +207,7 @@ func (s *Service) handleBalance() http.HandlerFunc {
 
 func (s *Service) handleWithdrawal() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Content-Type", "application/json")
+		w.Header().Set("Content-Type", "application/json")
 
 		userIDString, _ := r.Cookie("secret_id")
 		userID, _ := strconv.Atoi(userIDString.Value)
@@ -249,7 +248,7 @@ func (s *Service) handleWithdrawal() http.HandlerFunc {
 
 func (s *Service) handleWithdrawals() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Content-Type", "application/json")
+		w.Header().Set("Content-Type", "application/json")
 
 		userIDString, _ := r.Cookie("secret_id")
 		userID, _ := strconv.Atoi(userIDString.Value)

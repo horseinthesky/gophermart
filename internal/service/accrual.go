@@ -21,6 +21,7 @@ func (s *Service) processOrders(ctx context.Context) {
 	log.Println("accrual processor started")
 
 	for {
+		// time.Sleep(100 * time.Millisecond)
 		time.Sleep(1 * time.Second)
 
 		select {
@@ -47,7 +48,7 @@ func (s *Service) processOrders(ctx context.Context) {
 }
 
 func (s *Service) processOrder(ctx context.Context, order storage.Order) {
-	url := fmt.Sprintf("http://%s/api/orders/%s", s.config.AccrualAddress, order.Number)
+	url := fmt.Sprintf("%s/api/orders/%s", s.config.AccrualAddress, order.Number)
 
 	request, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
