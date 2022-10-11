@@ -100,6 +100,12 @@ type (
 		UploadedAt time.Time `json:"uploaded_at" db:"uploaded_at"`
 	}
 
+	AccrualOrder struct {
+		Order   string  `json:"order"`
+		Status  Status  `json:"status"`
+		Accrual float32 `json:"accrual,omitempty"`
+	}
+
 	Withdrawal struct {
 		ID          int       `json:"-"`
 		UserID      int       `json:"-"`
@@ -118,7 +124,7 @@ type (
 		GetUserBalance(context.Context, int) (Balance, error)
 
 		SaveOrder(context.Context, Order) error
-		UpdateOrder(context.Context, Order) error
+		UpdateOrder(context.Context, AccrualOrder) error
 		GetUserOrders(context.Context, int, string) ([]Order, error)
 		GetOrders(context.Context, []Status) ([]Order, error)
 

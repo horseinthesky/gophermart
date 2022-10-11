@@ -21,7 +21,6 @@ func (s *Service) processOrders(ctx context.Context) {
 	log.Println("accrual processor started")
 
 	for {
-		// time.Sleep(100 * time.Millisecond)
 		time.Sleep(1 * time.Second)
 
 		select {
@@ -79,7 +78,7 @@ func (s *Service) processOrder(ctx context.Context, order storage.Order) {
 		return
 	}
 
-	processedOrder := storage.Order{}
+	processedOrder := storage.AccrualOrder{}
 	err = json.NewDecoder(response.Body).Decode(&processedOrder)
 	if err != nil {
 		log.Printf("accrual processor failed to parse processed order %s: %s", order.Number, err)

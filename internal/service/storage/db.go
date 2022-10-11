@@ -138,8 +138,19 @@ func (d *DB) SaveOrder(ctx context.Context, order Order) error {
 	return nil
 }
 
-func (d *DB) UpdateOrder(ctx context.Context, order Order) error {
-	_, err := d.conn.NamedExecContext(ctx, `UPDATE orders SET status = :status, accrual = :accrual WHERE number=:number`, order)
+func (d *DB) UpdateOrder(ctx context.Context, order AccrualOrder) error {
+	_, err := d.conn.NamedExecContext(ctx, `UPDATE orders SET status = :status, accrual = :accrual WHERE number=:order`, order)
+	if err != nil {
+		return fmt.Errorf("failed to update order: %w", err)
+	}
+
+	updatedOrder := Order{}
+	err = d.conn.GetContext(ctx, &updatedOrder, `SELECT * FROM orders WHERE number=$1`, order.Order)
+	if err != nil {
+		return fmt.Errorf("failed to get updated order: %w", err)
+	}
+
+	_, err = d.conn.NamedExecContext(ctx, `UPDATE users SET current = users.current + :accrual WHERE id=:userid`, updatedOrder)
 	if err != nil {
 		return fmt.Errorf("failed to update order: %w", err)
 	}
