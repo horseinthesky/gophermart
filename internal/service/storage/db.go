@@ -231,6 +231,7 @@ func (d *DB) SaveWithdrawal(ctx context.Context, withdrawal Withdrawal) error {
 
 func (d *DB) GetWithdrawals(ctx context.Context, userID int, orderField string) ([]Withdrawal, error) {
 	query := fmt.Sprintf(`SELECT * FROM withdrawals WHERE userid=$1 ORDER BY %s`, orderField)
+
 	withdrawals := []Withdrawal{}
 
 	err := d.conn.SelectContext(ctx, &withdrawals, query, userID)
