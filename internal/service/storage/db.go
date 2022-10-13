@@ -36,7 +36,7 @@ func (d *DB) Init(ctx context.Context) error {
 		CREATE TABLE IF NOT EXISTS orders (
 			id serial PRIMARY KEY,
 			registered_by text NOT NULL REFERENCES users (name) ON DELETE CASCADE,
-			number text NOT NULL,
+			number text NOT NULL UNIQUE,
 			status int NOT NULL,
 			accrual double precision DEFAULT 0,
 			uploaded_at timestamptz NOT NULL
@@ -172,7 +172,6 @@ func (d *DB) GetUserOrders(ctx context.Context, userName string, orderField stri
 }
 
 func (d *DB) GetOrders(ctx context.Context, statuses []Status) ([]Order, error) {
-	// sqlx.In returns queries with the `?` bindvar, we can rebind it for our backend
 	query, args, err := sqlx.In(`SELECT * FROM orders WHERE status IN (?)`, statuses)
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare IN query: %w", err)

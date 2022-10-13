@@ -38,6 +38,7 @@ func (s *Service) handleNewOrder() http.HandlerFunc {
 		orderNumberString := strings.TrimSuffix(string(body), "\n")
 		if !validLuhn(orderNumberString) {
 			http.Error(w, "order number is incorrect", http.StatusUnprocessableEntity)
+			return
 		}
 
 		userNameCookie, _ := r.Cookie("user")
@@ -136,6 +137,7 @@ func (s *Service) handleWithdrawal() http.HandlerFunc {
 
 		if !validLuhn(withdrawal.Order) {
 			http.Error(w, "order number is incorrect", http.StatusUnprocessableEntity)
+			return
 		}
 
 		err = s.db.SaveWithdrawal(r.Context(), withdrawal)
