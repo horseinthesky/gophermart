@@ -92,12 +92,12 @@ type (
 	}
 
 	Order struct {
-		ID         int       `json:"-"`
-		UserID     int       `json:"-"`
-		Number     string    `json:"number"`
-		Status     Status    `json:"status"`
-		Accrual    float32   `json:"accrual,omitempty"`
-		UploadedAt time.Time `json:"uploaded_at" db:"uploaded_at"`
+		ID           int       `json:"-"`
+		RegisteredBy string    `json:"-" db:"registered_by"`
+		Number       string    `json:"number"`
+		Status       Status    `json:"status"`
+		Accrual      float32   `json:"accrual,omitempty"`
+		UploadedAt   time.Time `json:"uploaded_at" db:"uploaded_at"`
 	}
 
 	AccrualOrder struct {
@@ -107,11 +107,11 @@ type (
 	}
 
 	Withdrawal struct {
-		ID          int       `json:"-"`
-		UserID      int       `json:"-"`
-		Order       string    `json:"order" db:"orderid"`
-		Sum         float32   `json:"sum"`
-		ProcessedAt time.Time `json:"processed_at" db:"processed_at"`
+		ID           int       `json:"-"`
+		RegisteredBy string    `json:"-" db:"registered_by"`
+		Order        string    `json:"order" db:"orderid"`
+		Sum          float32   `json:"sum"`
+		ProcessedAt  time.Time `json:"processed_at" db:"processed_at"`
 	}
 
 	Storage interface {
@@ -121,15 +121,15 @@ type (
 		CreateUser(context.Context, User) (User, error)
 		GetUserByCreds(context.Context, User) (User, error)
 		GetUserByName(context.Context, string) (User, error)
-		GetUserBalance(context.Context, int) (Balance, error)
+		GetUserBalance(context.Context, string) (Balance, error)
 
 		SaveOrder(context.Context, Order) error
 		UpdateOrder(context.Context, AccrualOrder) error
-		GetUserOrders(context.Context, int, string) ([]Order, error)
+		GetUserOrders(context.Context, string, string) ([]Order, error)
 		GetOrders(context.Context, []Status) ([]Order, error)
 
 		SaveWithdrawal(context.Context, Withdrawal) error
-		GetWithdrawals(context.Context, int, string) ([]Withdrawal, error)
+		GetWithdrawals(context.Context, string, string) ([]Withdrawal, error)
 
 		Close()
 	}

@@ -6,7 +6,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -117,8 +116,8 @@ func (s *Service) loginRequired(next http.Handler) http.Handler {
 		}
 
 		r.AddCookie(&http.Cookie{
-			Name:  "user_id",
-			Value: strconv.Itoa(user.ID),
+			Name:  "user",
+			Value: user.Name,
 		})
 
 		next.ServeHTTP(w, r)

@@ -35,7 +35,7 @@ func (d *DB) Init(ctx context.Context) error {
 	ordersTable := `
 		CREATE TABLE IF NOT EXISTS orders (
 			id serial PRIMARY KEY,
-			userid integer NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+			registered_by text NOT NULL REFERENCES users (name) ON DELETE CASCADE,
 			number text NOT NULL,
 			status int NOT NULL,
 			accrual double precision DEFAULT 0,
@@ -46,7 +46,7 @@ func (d *DB) Init(ctx context.Context) error {
 	withdrawalsTable := `
 		CREATE TABLE IF NOT EXISTS withdrawals (
 			id serial PRIMARY KEY,
-			userid integer NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+			registered_by text NOT NULL REFERENCES users (name) ON DELETE CASCADE,
 			orderid text NOT NULL,
 			sum double precision NOT NULL,
 			processed_at timestamptz NOT NULL
@@ -121,16 +121,16 @@ func (d *DB) SaveOrder(ctx context.Context, order Order) error {
 
 	err := d.conn.GetContext(ctx, &existingOrder, `SELECT * FROM orders WHERE number=$1`, order.Number)
 	if err == nil {
-		if existingOrder.UserID == order.UserID {
+		if existingOrder.RegisteredBy == order.RegisteredBy {
 			return ErrOrderAlreadyRegisteredByUser
 		}
 
-		if existingOrder.UserID != order.UserID {
+		if existingOrder.RegisteredBy != order.RegisteredBy {
 			return ErrOrderAlreadyRegisteredBySomeoneElse
 		}
 	}
 
-	_, err = d.conn.NamedExecContext(ctx, `INSERT INTO orders (userid, number, status, uploaded_at) VALUES (:userid, :number, :status, :uploaded_at)`, order)
+	_, err = d.conn.NamedExecContext(ctx, `INSERT INTO orders (registered_by, number, status, uploaded_at) VALUES (:registered_by, :number, :status, :uploaded_at)`, order)
 	if err != nil {
 		return fmt.Errorf("failed to insert new order: %w", err)
 	}
@@ -150,7 +150,7 @@ func (d *DB) UpdateOrder(ctx context.Context, order AccrualOrder) error {
 		return fmt.Errorf("failed to get updated order: %w", err)
 	}
 
-	_, err = d.conn.NamedExecContext(ctx, `UPDATE users SET current = users.current + :accrual WHERE id=:userid`, updatedOrder)
+	_, err = d.conn.NamedExecContext(ctx, `UPDATE users SET current = users.current + :accrual WHERE name=:registered_by`, updatedOrder)
 	if err != nil {
 		return fmt.Errorf("failed to update order: %w", err)
 	}
@@ -158,12 +158,12 @@ func (d *DB) UpdateOrder(ctx context.Context, order AccrualOrder) error {
 	return nil
 }
 
-func (d *DB) GetUserOrders(ctx context.Context, userID int, orderField string) ([]Order, error) {
-	query := fmt.Sprintf(`SELECT * FROM orders WHERE userid=$1 ORDER BY %s`, orderField)
+func (d *DB) GetUserOrders(ctx context.Context, userName string, orderField string) ([]Order, error) {
+	query := fmt.Sprintf(`SELECT * FROM orders WHERE registered_by=$1 ORDER BY %s`, orderField)
 
 	orders := []Order{}
 
-	err := d.conn.SelectContext(ctx, &orders, query, userID)
+	err := d.conn.SelectContext(ctx, &orders, query, userName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get orders")
 	}
@@ -190,10 +190,10 @@ func (d *DB) GetOrders(ctx context.Context, statuses []Status) ([]Order, error) 
 	return orders, nil
 }
 
-func (d *DB) GetUserBalance(ctx context.Context, userID int) (Balance, error) {
+func (d *DB) GetUserBalance(ctx context.Context, userName string) (Balance, error) {
 	user := User{}
 
-	err := d.conn.GetContext(ctx, &user, `SELECT * FROM users WHERE id=$1`, userID)
+	err := d.conn.GetContext(ctx, &user, `SELECT * FROM users WHERE name=$1`, userName)
 	if err != nil {
 		return Balance{}, fmt.Errorf("failed to get user balance")
 	}
@@ -207,7 +207,7 @@ func (d *DB) GetUserBalance(ctx context.Context, userID int) (Balance, error) {
 func (d *DB) SaveWithdrawal(ctx context.Context, withdrawal Withdrawal) error {
 	user := User{}
 
-	err := d.conn.GetContext(ctx, &user, `SELECT * FROM users WHERE id=$1`, withdrawal.UserID)
+	err := d.conn.GetContext(ctx, &user, `SELECT * FROM users WHERE name=$1`, withdrawal.RegisteredBy)
 	if err != nil {
 		return fmt.Errorf("failed to get user to withdraw from")
 	}
@@ -216,12 +216,12 @@ func (d *DB) SaveWithdrawal(ctx context.Context, withdrawal Withdrawal) error {
 		return ErrNotEnoughPoints
 	}
 
-	_, err = d.conn.NamedExecContext(ctx, `UPDATE users SET current = users.current - :sum, withdrawn = users.withdrawn + :sum WHERE id = :userid`, withdrawal)
+	_, err = d.conn.NamedExecContext(ctx, `UPDATE users SET current = users.current - :sum, withdrawn = users.withdrawn + :sum WHERE name = :registered_by`, withdrawal)
 	if err != nil {
 		return fmt.Errorf("failed to update user balance: %w", err)
 	}
 
-	_, err = d.conn.NamedExecContext(ctx, `INSERT INTO withdrawals (userid, orderid, sum, processed_at) VALUES (:userid, :orderid, :sum, :processed_at)`, withdrawal)
+	_, err = d.conn.NamedExecContext(ctx, `INSERT INTO withdrawals (registered_by, orderid, sum, processed_at) VALUES (:registered_by, :orderid, :sum, :processed_at)`, withdrawal)
 	if err != nil {
 		return fmt.Errorf("failed to insert new withdraw: %w", err)
 	}
@@ -229,12 +229,12 @@ func (d *DB) SaveWithdrawal(ctx context.Context, withdrawal Withdrawal) error {
 	return nil
 }
 
-func (d *DB) GetWithdrawals(ctx context.Context, userID int, orderField string) ([]Withdrawal, error) {
-	query := fmt.Sprintf(`SELECT * FROM withdrawals WHERE userid=$1 ORDER BY %s`, orderField)
+func (d *DB) GetWithdrawals(ctx context.Context, userName string, orderField string) ([]Withdrawal, error) {
+	query := fmt.Sprintf(`SELECT * FROM withdrawals WHERE registered_by=$1 ORDER BY %s`, orderField)
 
 	withdrawals := []Withdrawal{}
 
-	err := d.conn.SelectContext(ctx, &withdrawals, query, userID)
+	err := d.conn.SelectContext(ctx, &withdrawals, query, userName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get withdrawals")
 	}

@@ -14,15 +14,21 @@ import (
 	"github.com/theplant/luhn"
 )
 
+func validLuhn(orderNumber string) bool {
+	orderNum, err := strconv.Atoi(orderNumber)
+	if err != nil {
+		return false
+	}
+
+	if !luhn.Valid(orderNum) {
+		return false
+	}
+
+	return true
+}
+
 func (s *Service) handleNewOrder() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		uploadedAt := time.Now()
-
-		if r.Header.Get("Content-Type") != "text/plain" {
-			http.Error(w, `Content-Type must be "text/plain"`, http.StatusBadRequest)
-			return
-		}
-
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			http.Error(w, `failed to read payload`, http.StatusInternalServerError)
@@ -30,25 +36,16 @@ func (s *Service) handleNewOrder() http.HandlerFunc {
 		}
 
 		orderNumberString := strings.TrimSuffix(string(body), "\n")
-
-		orderNum, err := strconv.Atoi(orderNumberString)
-		if err != nil {
-			http.Error(w, "Order number is incorrect", http.StatusBadRequest)
-			return
+		if !validLuhn(orderNumberString) {
+			http.Error(w, "order number is incorrect", http.StatusUnprocessableEntity)
 		}
 
-		if !luhn.Valid(orderNum) {
-			http.Error(w, "Order number has wrong format.", http.StatusUnprocessableEntity)
-			return
-		}
-
-		userIDString, _ := r.Cookie("user_id")
-		userID, _ := strconv.Atoi(userIDString.Value)
+		userNameCookie, _ := r.Cookie("user")
 
 		newOrder := storage.Order{
-			UserID:     userID,
-			Number:     orderNumberString,
-			UploadedAt: uploadedAt,
+			RegisteredBy: userNameCookie.Value,
+			Number:       orderNumberString,
+			UploadedAt:   time.Now(),
 		}
 
 		if err := s.db.SaveOrder(r.Context(), newOrder); err != nil {
@@ -75,10 +72,9 @@ func (s *Service) handleOrders() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		userIDString, _ := r.Cookie("user_id")
-		userID, _ := strconv.Atoi(userIDString.Value)
+		userNameCookie, _ := r.Cookie("user")
 
-		orders, err := s.db.GetUserOrders(r.Context(), userID, "uploaded_at")
+		orders, err := s.db.GetUserOrders(r.Context(), userNameCookie.Value, "uploaded_at")
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(`{"status": "error", "message": "failed to get orders"}`))
@@ -104,10 +100,9 @@ func (s *Service) handleBalance() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		userIDString, _ := r.Cookie("user_id")
-		userID, _ := strconv.Atoi(userIDString.Value)
+		userNameCookie, _ := r.Cookie("user")
 
-		balance, err := s.db.GetUserBalance(r.Context(), userID)
+		balance, err := s.db.GetUserBalance(r.Context(), userNameCookie.Value)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(`{"status": "error", "message": "failed to get balance"}`))
@@ -127,9 +122,6 @@ func (s *Service) handleWithdrawal() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		userIDString, _ := r.Cookie("user_id")
-		userID, _ := strconv.Atoi(userIDString.Value)
-
 		withdrawal := storage.Withdrawal{}
 		err := json.NewDecoder(r.Body).Decode(&withdrawal)
 		if err != nil {
@@ -137,14 +129,13 @@ func (s *Service) handleWithdrawal() http.HandlerFunc {
 			return
 		}
 
-		withdrawal.UserID = userID
+		userNameCookie, _ := r.Cookie("user")
+
+		withdrawal.RegisteredBy = userNameCookie.Value
 		withdrawal.ProcessedAt = time.Now()
 
-		orderNum, _ := strconv.Atoi(withdrawal.Order)
-
-		if !luhn.Valid(orderNum) {
-			http.Error(w, "Order number has wrong format.", http.StatusUnprocessableEntity)
-			return
+		if !validLuhn(withdrawal.Order) {
+			http.Error(w, "order number is incorrect", http.StatusUnprocessableEntity)
 		}
 
 		err = s.db.SaveWithdrawal(r.Context(), withdrawal)
@@ -168,10 +159,9 @@ func (s *Service) handleWithdrawals() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		userIDString, _ := r.Cookie("user_id")
-		userID, _ := strconv.Atoi(userIDString.Value)
+		userNameCookie, _ := r.Cookie("user")
 
-		withdrawals, err := s.db.GetWithdrawals(r.Context(), userID, "processed_at")
+		withdrawals, err := s.db.GetWithdrawals(r.Context(), userNameCookie.Value, "processed_at")
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(`{"status": "error", "message": "failed to get withdrawals"}`))
