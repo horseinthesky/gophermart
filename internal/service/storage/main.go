@@ -119,8 +119,8 @@ type (
 		Check(context.Context) error
 
 		CreateUser(context.Context, User) (User, error)
-		GetUserByName(context.Context, User) (User, error)
-		GetUserByID(context.Context, int) (User, error)
+		GetUserByCreds(context.Context, User) (User, error)
+		GetUserByName(context.Context, string) (User, error)
 		GetUserBalance(context.Context, int) (Balance, error)
 
 		SaveOrder(context.Context, Order) error

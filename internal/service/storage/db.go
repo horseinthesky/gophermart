@@ -94,7 +94,7 @@ func (d *DB) CreateUser(ctx context.Context, user User) (User, error) {
 	return registeredUser, err
 }
 
-func (d *DB) GetUserByName(ctx context.Context, user User) (User, error) {
+func (d *DB) GetUserByCreds(ctx context.Context, user User) (User, error) {
 	existingUser := User{}
 
 	err := d.conn.GetContext(ctx, &existingUser, `SELECT * FROM users WHERE name=$1 AND passhash=$2`, user.Name, user.Passhash)
@@ -105,10 +105,10 @@ func (d *DB) GetUserByName(ctx context.Context, user User) (User, error) {
 	return existingUser, nil
 }
 
-func (d *DB) GetUserByID(ctx context.Context, userID int) (User, error) {
+func (d *DB) GetUserByName(ctx context.Context, userName string) (User, error) {
 	user := User{}
 
-	err := d.conn.GetContext(ctx, &user, `SELECT * FROM users WHERE id=$1`, userID)
+	err := d.conn.GetContext(ctx, &user, `SELECT * FROM users WHERE name=$1`, userName)
 	if err != nil {
 		return User{}, ErrUserDoesNotExist
 	}

@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/golang-jwt/jwt/v4"
 )
 
 type gzipWriter struct {
@@ -35,7 +37,6 @@ func logRequest(next http.Handler) http.Handler {
 		log.Print("Headers:")
 		for header, values := range r.Header {
 			log.Print(header, values)
-
 		}
 
 		r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
@@ -67,26 +68,58 @@ func (s *Service) loginRequired(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
 
-		userIDString, err := r.Cookie("secret_id")
+		tokenCookie, err := r.Cookie("token")
 		if err != nil {
-			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte(`{"status": "error", "message": "not authenticated"}`))
+			if err == http.ErrNoCookie {
+				w.WriteHeader(http.StatusUnauthorized)
+				w.Write([]byte(`{"status": "error", "message": "not authenticated"}`))
+				return
+			}
+
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`{"status": "error", "message": "failed to parse cookies"}`))
 			return
 		}
 
-		userID, err := strconv.Atoi(userIDString.Value)
+		tokenValue := tokenCookie.Value
+
+		claims := jwtClaims{}
+
+		token, err := jwt.ParseWithClaims(
+			tokenValue,
+			&claims,
+			func(t *jwt.Token) (interface{}, error) {
+				return jwtKey, nil
+			},
+		)
 		if err != nil {
+			if err == jwt.ErrSignatureInvalid {
+				w.WriteHeader(http.StatusUnauthorized)
+				w.Write([]byte(`{"status": "error", "message": "invalid token signature"}`))
+				return
+			}
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(`{"status": "error", "message": "invalid secret_id"}`))
+			w.Write([]byte(`{"status": "error", "message": "failed to parse token"}`))
 			return
 		}
 
-		_, err = s.db.GetUserByID(r.Context(), userID)
-		if err != nil {
+		if !token.Valid {
 			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte(`{"status": "error", "message": "not authenticated"}`))
+			w.Write([]byte(`{"status": "error", "message": "invalid token"}`))
 			return
 		}
+
+		user, err := s.db.GetUserByName(r.Context(), claims.Username)
+		if err != nil {
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte(`{"status": "error", "message": "user not found"}`))
+			return
+		}
+
+		r.AddCookie(&http.Cookie{
+			Name:  "user_id",
+			Value: strconv.Itoa(user.ID),
+		})
 
 		next.ServeHTTP(w, r)
 	})
