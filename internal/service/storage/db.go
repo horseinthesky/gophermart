@@ -35,7 +35,7 @@ func (d *DB) Init(ctx context.Context) error {
 	ordersTable := `
 		CREATE TABLE IF NOT EXISTS orders (
 			id serial PRIMARY KEY,
-			userid integer NOT NULL,
+			userid integer NOT NULL REFERENCES users (id) ON DELETE CASCADE,
 			number text NOT NULL,
 			status int NOT NULL,
 			accrual double precision DEFAULT 0,
@@ -46,7 +46,7 @@ func (d *DB) Init(ctx context.Context) error {
 	withdrawalsTable := `
 		CREATE TABLE IF NOT EXISTS withdrawals (
 			id serial PRIMARY KEY,
-			userid integer NOT NULL,
+			userid integer NOT NULL REFERENCES users (id) ON DELETE CASCADE,
 			orderid text NOT NULL,
 			sum double precision NOT NULL,
 			processed_at timestamptz NOT NULL
