@@ -3,12 +3,13 @@ package service
 import (
 	"bytes"
 	"compress/gzip"
+	"errors"
 	"io"
 	"log"
 	"net/http"
 	"strings"
 
-	"github.com/golang-jwt/jwt/v4"
+	"gophermart/internal/service/token"
 )
 
 type gzipWriter struct {
@@ -80,35 +81,22 @@ func (s *Service) loginRequired(next http.Handler) http.Handler {
 			return
 		}
 
-		tokenValue := tokenCookie.Value
-
-		claims := jwtClaims{}
-
-		token, err := jwt.ParseWithClaims(
-			tokenValue,
-			&claims,
-			func(t *jwt.Token) (interface{}, error) {
-				return jwtKey, nil
-			},
-		)
+		payload, err := s.tm.VerifyToken(tokenCookie.Value)
 		if err != nil {
-			if err == jwt.ErrSignatureInvalid {
+			if errors.Is(err, token.ErrInvalidToken) {
 				w.WriteHeader(http.StatusUnauthorized)
-				w.Write([]byte(`{"status": "error", "message": "invalid token signature"}`))
+				w.Write([]byte(`{"status": "error", "message": "invalid token"}`))
 				return
 			}
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(`{"status": "error", "message": "failed to parse token"}`))
-			return
+
+			if errors.Is(err, token.ErrExpiredToken) {
+				w.WriteHeader(http.StatusUnauthorized)
+				w.Write([]byte(`{"status": "error", "message": "expired token"}`))
+				return
+			}
 		}
 
-		if !token.Valid {
-			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte(`{"status": "error", "message": "invalid token"}`))
-			return
-		}
-
-		user, err := s.db.GetUserByName(r.Context(), claims.Username)
+		user, err := s.db.GetUserByName(r.Context(), payload.Username)
 		if err != nil {
 			w.WriteHeader(http.StatusUnauthorized)
 			w.Write([]byte(`{"status": "error", "message": "user not found"}`))

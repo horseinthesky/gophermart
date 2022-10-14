@@ -11,13 +11,17 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"gophermart/internal/service/storage"
+	"gophermart/internal/service/token"
 )
 
 type (
 	Config struct {
-		RunAddress     string `env:"RUN_ADDRESS" envDefault:"localhost:8000"`
-		DatabaseURI    string `env:"DATABASE_URI" envDefault:"postgresql://postgres@localhost:5432?sslmode=disable"`
-		AccrualAddress string `env:"ACCRUAL_SYSTEM_ADDRESS" envDefault:"http://localhost:8080"`
+		RunAddress     string        `env:"RUN_ADDRESS" envDefault:"localhost:8000"`
+		DatabaseURI    string        `env:"DATABASE_URI" envDefault:"postgresql://postgres@localhost:5432?sslmode=disable"`
+		AccrualAddress string        `env:"ACCRUAL_SYSTEM_ADDRESS" envDefault:"http://localhost:8080"`
+		TokenEngine    string        `env:"TOKEN_ENGINE" envDefault:"paseto"`
+		TokenDuration  time.Duration `env:"TOKEN_DURATION" envDefault:"24h"`
+		Key            string        `env:"SECRET" envDefault:"cuzyouwillneverknowthissecretkey"`
 		Debug          bool
 	}
 
@@ -26,6 +30,7 @@ type (
 		router *chi.Mux
 		db     storage.Storage
 		client *http.Client
+		tm     token.Maker
 		wg     sync.WaitGroup
 	}
 )
@@ -40,7 +45,12 @@ func New(cfg Config) (*Service, error) {
 		Timeout: 5 * time.Second,
 	}
 
-	return &Service{cfg, nil, db, client, sync.WaitGroup{}}, nil
+	tokenMaker, err := token.NewTokenMaker(cfg.TokenEngine, cfg.Key)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Service{cfg, nil, db, client, tokenMaker, sync.WaitGroup{}}, nil
 }
 
 func (s *Service) Run(ctx context.Context) {

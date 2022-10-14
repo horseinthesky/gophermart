@@ -11,7 +11,7 @@ import (
 
 	"gophermart/internal/service"
 
-	"github.com/caarlos0/env"
+	"github.com/caarlos0/env/v6"
 )
 
 func getConfig() service.Config {
@@ -24,6 +24,9 @@ func getConfig() service.Config {
 	flag.StringVar(&cfg.RunAddress, "a", cfg.RunAddress, "Socket to listen on")
 	flag.StringVar(&cfg.DatabaseURI, "d", cfg.DatabaseURI, "Database URI")
 	flag.StringVar(&cfg.AccrualAddress, "r", cfg.AccrualAddress, "Accrual system address")
+	flag.StringVar(&cfg.TokenEngine, "e", cfg.TokenEngine, "Token engine: jwt/paseto(default)")
+	flag.DurationVar(&cfg.TokenDuration, "t", cfg.TokenDuration, "Token duration")
+	flag.StringVar(&cfg.Key, "k", cfg.Key, "Secret key")
 	flag.BoolVar(&cfg.Debug, "D", false, "Debug mode")
 	flag.Parse()
 

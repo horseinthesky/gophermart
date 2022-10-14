@@ -6,30 +6,8 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/golang-jwt/jwt/v4"
-
 	"gophermart/internal/service/storage"
 )
-
-var jwtKey = []byte("youwillneverknow")
-
-type jwtClaims struct {
-	jwt.StandardClaims
-	Username string
-}
-
-func newJWToken(user storage.User) string {
-	claims := jwtClaims{
-		Username: user.Name,
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &claims)
-
-	tokenString, _ := token.SignedString(jwtKey)
-
-	return tokenString
-
-}
 
 func (s *Service) handleRegister() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -65,7 +43,12 @@ func (s *Service) handleRegister() http.HandlerFunc {
 			return
 		}
 
-		token := newJWToken(registeredUser)
+		token, _, err := s.tm.CreateToken(registeredUser.Name, s.config.TokenDuration)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`{"status": "error", "message": "failed to create token"}`))
+			return
+		}
 
 		http.SetCookie(w,
 			&http.Cookie{
@@ -101,11 +84,16 @@ func (s *Service) handleLogin() http.HandlerFunc {
 		registeredUser, err := s.db.GetUserByCreds(r.Context(), user)
 		if errors.Is(err, storage.ErrUserDoesNotExist) {
 			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte(`{"status": "error", "message": "login/password does not exists"}`))
+			w.Write([]byte(`{"status": "error", "message": "login/password pair does not exists"}`))
 			return
 		}
 
-		token := newJWToken(registeredUser)
+		token, _, err := s.tm.CreateToken(registeredUser.Name, s.config.TokenDuration)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`{"status": "error", "message": "failed to create token"}`))
+			return
+		}
 
 		http.SetCookie(w,
 			&http.Cookie{
