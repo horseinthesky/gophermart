@@ -12,7 +12,7 @@ func (s *Service) setupRouter() {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-	r.Use(handleGzip)
+	r.Use(middleware.Compress(5))
 	if s.config.Debug {
 		r.Use(logRequest)
 	}
