@@ -14,7 +14,7 @@ import (
 type ctxKey int
 
 const (
-	userNameKey ctxKey = iota
+	contextUserNameKey ctxKey = iota
 )
 
 func logRequest(next http.Handler) http.Handler {
@@ -80,7 +80,7 @@ func (s *Service) loginRequired(next http.Handler) http.Handler {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), userNameKey, user.Name)
+		ctx := context.WithValue(r.Context(), contextUserNameKey, user.Name)
 		r = r.WithContext(ctx)
 
 		next.ServeHTTP(w, r)

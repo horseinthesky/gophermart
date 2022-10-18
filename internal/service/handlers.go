@@ -15,7 +15,7 @@ import (
 )
 
 func getUserName(r *http.Request) string {
-	return r.Context().Value(userNameKey).(string)
+	return r.Context().Value(contextUserNameKey).(string)
 }
 
 func validLuhn(orderNumber string) bool {
