@@ -14,7 +14,7 @@ import (
 	"github.com/theplant/luhn"
 )
 
-func getUserName(r *http.Request) string {
+func getUserNameFromRequest(r *http.Request) string {
 	return r.Context().Value(contextUserNameKey).(string)
 }
 
@@ -46,7 +46,7 @@ func (s *Service) handleNewOrder() http.HandlerFunc {
 		}
 
 		newOrder := storage.Order{
-			RegisteredBy: getUserName(r),
+			RegisteredBy: getUserNameFromRequest(r),
 			Number:       orderNumberString,
 			UploadedAt:   time.Now(),
 		}
@@ -75,7 +75,7 @@ func (s *Service) handleOrders() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		orders, err := s.db.GetUserOrders(r.Context(), getUserName(r), "uploaded_at")
+		orders, err := s.db.GetUserOrders(r.Context(), getUserNameFromRequest(r), "uploaded_at")
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(`{"status": "error", "message": "failed to get orders"}`))
@@ -101,7 +101,7 @@ func (s *Service) handleBalance() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		balance, err := s.db.GetUserBalance(r.Context(), getUserName(r))
+		balance, err := s.db.GetUserBalance(r.Context(), getUserNameFromRequest(r))
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(`{"status": "error", "message": "failed to get balance"}`))
@@ -128,7 +128,7 @@ func (s *Service) handleWithdrawal() http.HandlerFunc {
 			return
 		}
 
-		withdrawal.RegisteredBy = getUserName(r)
+		withdrawal.RegisteredBy = getUserNameFromRequest(r)
 		withdrawal.ProcessedAt = time.Now()
 
 		if !validLuhn(withdrawal.Order) {
@@ -157,7 +157,7 @@ func (s *Service) handleWithdrawals() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		withdrawals, err := s.db.GetWithdrawals(r.Context(), getUserName(r), "processed_at")
+		withdrawals, err := s.db.GetWithdrawals(r.Context(), getUserNameFromRequest(r), "processed_at")
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(`{"status": "error", "message": "failed to get withdrawals"}`))
