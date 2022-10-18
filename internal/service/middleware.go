@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"errors"
 	"io"
 	"log"
@@ -103,10 +104,8 @@ func (s *Service) loginRequired(next http.Handler) http.Handler {
 			return
 		}
 
-		r.AddCookie(&http.Cookie{
-			Name:  "user",
-			Value: user.Name,
-		})
+		ctx := context.WithValue(r.Context(), "user", user.Name)
+		r = r.WithContext(ctx)
 
 		next.ServeHTTP(w, r)
 	})

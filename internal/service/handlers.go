@@ -14,6 +14,10 @@ import (
 	"github.com/theplant/luhn"
 )
 
+func getUserName(r *http.Request) string {
+	return r.Context().Value("user").(string)
+}
+
 func validLuhn(orderNumber string) bool {
 	orderNum, err := strconv.Atoi(orderNumber)
 	if err != nil {
@@ -41,10 +45,8 @@ func (s *Service) handleNewOrder() http.HandlerFunc {
 			return
 		}
 
-		userNameCookie, _ := r.Cookie("user")
-
 		newOrder := storage.Order{
-			RegisteredBy: userNameCookie.Value,
+			RegisteredBy: getUserName(r),
 			Number:       orderNumberString,
 			UploadedAt:   time.Now(),
 		}
@@ -73,9 +75,7 @@ func (s *Service) handleOrders() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		userNameCookie, _ := r.Cookie("user")
-
-		orders, err := s.db.GetUserOrders(r.Context(), userNameCookie.Value, "uploaded_at")
+		orders, err := s.db.GetUserOrders(r.Context(), getUserName(r), "uploaded_at")
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(`{"status": "error", "message": "failed to get orders"}`))
@@ -101,9 +101,7 @@ func (s *Service) handleBalance() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		userNameCookie, _ := r.Cookie("user")
-
-		balance, err := s.db.GetUserBalance(r.Context(), userNameCookie.Value)
+		balance, err := s.db.GetUserBalance(r.Context(), getUserName(r))
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(`{"status": "error", "message": "failed to get balance"}`))
@@ -130,9 +128,7 @@ func (s *Service) handleWithdrawal() http.HandlerFunc {
 			return
 		}
 
-		userNameCookie, _ := r.Cookie("user")
-
-		withdrawal.RegisteredBy = userNameCookie.Value
+		withdrawal.RegisteredBy = getUserName(r)
 		withdrawal.ProcessedAt = time.Now()
 
 		if !validLuhn(withdrawal.Order) {
@@ -161,9 +157,7 @@ func (s *Service) handleWithdrawals() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		userNameCookie, _ := r.Cookie("user")
-
-		withdrawals, err := s.db.GetWithdrawals(r.Context(), userNameCookie.Value, "processed_at")
+		withdrawals, err := s.db.GetWithdrawals(r.Context(), getUserName(r), "processed_at")
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(`{"status": "error", "message": "failed to get withdrawals"}`))
