@@ -14,7 +14,7 @@ func (s *Service) setupRouter() {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Compress(5))
 	if s.config.Debug {
-		r.Use(logRequest)
+		r.Use(s.logRequest)
 	}
 
 	r.Route("/api/user", func(r chi.Router) {

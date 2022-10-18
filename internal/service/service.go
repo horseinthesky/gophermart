@@ -2,13 +2,12 @@ package service
 
 import (
 	"context"
-	"fmt"
-	"log"
 	"net/http"
 	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"go.uber.org/zap"
 
 	"gophermart/internal/service/storage"
 	"gophermart/internal/service/token"
@@ -20,6 +19,7 @@ type Service struct {
 	db     storage.Storage
 	client *http.Client
 	tm     token.Maker
+	log    *zap.SugaredLogger
 	wg     sync.WaitGroup
 }
 
@@ -38,7 +38,12 @@ func New(cfg Config) (*Service, error) {
 		return nil, err
 	}
 
-	return &Service{cfg, nil, db, client, tokenMaker, sync.WaitGroup{}}, nil
+	logger, err := initLogger(cfg.LogLevel, cfg.LogFormat)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Service{cfg, nil, db, client, tokenMaker, logger, sync.WaitGroup{}}, nil
 }
 
 func (s *Service) Run(ctx context.Context) {
@@ -46,7 +51,7 @@ func (s *Service) Run(ctx context.Context) {
 
 	err := s.db.Init(ctx)
 	if err != nil {
-		log.Fatalf("failed to init DB: %s", err)
+		s.log.Fatalf("failed to init DB: %s", err)
 	}
 
 	s.wg.Add(1)
@@ -55,16 +60,16 @@ func (s *Service) Run(ctx context.Context) {
 		s.processOrders(ctx)
 	}()
 
-	log.Printf("gophermart server started at: %s; debug=%v", s.config.RunAddress, s.config.Debug)
-	log.Fatal(fmt.Errorf("server crashed due to: %w", http.ListenAndServe(s.config.RunAddress, s.router)))
+	s.log.Infof("gophermart server started at: %s; debug=%v", s.config.RunAddress, s.config.Debug)
+	s.log.Fatalf("server crashed due to: %s", http.ListenAndServe(s.config.RunAddress, s.router))
 }
 
 func (s *Service) Stop() {
-	log.Println("shutting down...")
+	s.log.Infof("shutting down...")
 
 	s.db.Close()
-	log.Println("connection to database closed")
+	s.log.Infof("connection to database closed")
 
 	s.wg.Wait()
-	log.Println("successfully shut down")
+	s.log.Infof("successfully shut down")
 }

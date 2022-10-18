@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
-	"log"
 	"net/http"
+	"strings"
 
 	"gophermart/internal/service/token"
 )
@@ -17,23 +18,25 @@ const (
 	contextUserNameKey ctxKey = iota
 )
 
-func logRequest(next http.Handler) http.Handler {
+func (s *Service) logRequest(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("Got %s request from %s for %s", r.Method, r.RemoteAddr, r.URL.Path)
+		s.log.Infof("got %s request from %s for %s", r.Method, r.RemoteAddr, r.URL.Path)
 
 		bodyBytes, err := io.ReadAll(r.Body)
 		if err != nil {
-			log.Println("Body: failed to read")
+			s.log.Errorf("failed to read request body: %s", err)
 			r.Body.Close()
 			next.ServeHTTP(w, r)
 		}
 		defer r.Body.Close()
 
-		log.Print("Body:", string(bodyBytes))
-		log.Print("Headers:")
+		s.log.Infof("payload: %s", string(bodyBytes))
+
+		headersMsg := []string{}
 		for header, values := range r.Header {
-			log.Print(header, values)
+			headersMsg = append(headersMsg, fmt.Sprintf("%s: %s", header, strings.Join(values, ", ")))
 		}
+		s.log.Infof("headers: %s", strings.Join(headersMsg, "; "))
 
 		r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 

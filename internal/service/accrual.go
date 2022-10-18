@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
@@ -18,24 +17,24 @@ var statusesToProcess = []storage.Status{
 }
 
 func (s *Service) processOrders(ctx context.Context) {
-	log.Println("accrual processor started")
+	s.log.Infof("accrual processor started")
 
 	for {
 		time.Sleep(1 * time.Second)
 
 		select {
 		case <-ctx.Done():
-			log.Println("accrual processor stopped")
+			s.log.Infof("accrual processor stopped")
 			return
 		default:
 			orders, err := s.db.GetOrders(ctx, statusesToProcess)
 			if err != nil {
-				log.Printf("accrual processor failed to get orders from DB: %s", err)
+				s.log.Errorf("accrual processor failed to get orders from DB: %s", err)
 				continue
 			}
 
 			if len(orders) == 0 {
-				log.Printf("accrual processor has no orders to process")
+				s.log.Infof("accrual processor has no orders to process")
 				continue
 			}
 
@@ -51,29 +50,29 @@ func (s *Service) processOrder(ctx context.Context, order storage.Order) {
 
 	request, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
-		log.Printf("accrual processor failed create request for order %s: %s", order.Number, err)
+		s.log.Errorf("accrual processor failed create request for order %s: %s", order.Number, err)
 		return
 	}
 
 	response, err := s.client.Do(request)
 	if err != nil {
-		log.Printf("accrual processor failed to process order %s: %s", order.Number, err)
+		s.log.Errorf("accrual processor failed to process order %s: %s", order.Number, err)
 		return
 	}
 	defer response.Body.Close()
 
 	if response.StatusCode == http.StatusInternalServerError {
-		log.Printf("accrual system failed to process order %s", order.Number)
+		s.log.Errorf("accrual system failed to process order %s", order.Number)
 		return
 	}
 
 	if response.StatusCode == http.StatusNoContent {
-		log.Printf("accrual system has no order %s registered", order.Number)
+		s.log.Infof("accrual system has no order %s", order.Number)
 		return
 	}
 
 	if response.StatusCode == http.StatusTooManyRequests {
-		log.Println("accrual system is overloaded")
+		s.log.Infof("accrual system is overloaded")
 		time.Sleep(5 * time.Second)
 		return
 	}
@@ -81,15 +80,15 @@ func (s *Service) processOrder(ctx context.Context, order storage.Order) {
 	processedOrder := storage.AccrualOrder{}
 	err = json.NewDecoder(response.Body).Decode(&processedOrder)
 	if err != nil {
-		log.Printf("accrual processor failed to parse processed order %s: %s", order.Number, err)
+		s.log.Errorf("accrual processor failed to parse processed order %s: %s", order.Number, err)
 		return
 	}
 
 	err = s.db.UpdateOrder(ctx, processedOrder)
 	if err != nil {
-		log.Printf("accrual processor failed to update order %s in DB: %s", order.Number, err)
+		s.log.Errorf("accrual processor failed to update order %s in DB: %s", order.Number, err)
 		return
 	}
 
-	log.Printf("successfully updated order %s status", order.Number)
+	s.log.Infof("successfully updated order %s status", order.Number)
 }
