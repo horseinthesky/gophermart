@@ -96,9 +96,7 @@ func (s *Service) loginRequired(next http.Handler) http.Handler {
 
 func (s *Service) limitPayload(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		lr := io.LimitReader(r.Body, payloadLimitBytes+1)
-
-		bodyBytes, err := io.ReadAll(lr)
+		bodyBytes, err := io.ReadAll(io.LimitReader(r.Body, payloadLimitBytes+1))
 		if err != nil {
 			s.log.Errorf("failed to read request body: %s", err)
 			r.Body.Close()
@@ -106,7 +104,7 @@ func (s *Service) limitPayload(next http.Handler) http.Handler {
 		}
 		defer r.Body.Close()
 
-		if len(bodyBytes) == payloadLimitBytes+1 {
+		if len(bodyBytes) > payloadLimitBytes {
 			s.log.Error("payload is too big")
 
 			w.WriteHeader(http.StatusRequestEntityTooLarge)
