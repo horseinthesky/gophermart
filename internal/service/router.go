@@ -13,6 +13,7 @@ func (s *Service) setupRouter() {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Compress(5))
+	r.Use(s.limitPayload)
 	if s.config.Debug {
 		r.Use(s.logRequest)
 	}

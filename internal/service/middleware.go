@@ -15,6 +15,8 @@ import (
 type ctxKey int
 
 const (
+	payloadLimitBytes = 100000
+
 	contextUserNameKey ctxKey = iota
 )
 
@@ -87,6 +89,32 @@ func (s *Service) loginRequired(next http.Handler) http.Handler {
 
 		ctx := context.WithValue(r.Context(), contextUserNameKey, user.Name)
 		r = r.WithContext(ctx)
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (s *Service) limitPayload(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		lr := io.LimitReader(r.Body, payloadLimitBytes+1)
+
+		bodyBytes, err := io.ReadAll(lr)
+		if err != nil {
+			s.log.Errorf("failed to read request body: %s", err)
+			r.Body.Close()
+			next.ServeHTTP(w, r)
+		}
+		defer r.Body.Close()
+
+		if len(bodyBytes) == payloadLimitBytes+1 {
+			s.log.Error("payload is too big")
+
+			w.WriteHeader(http.StatusRequestEntityTooLarge)
+			w.Write([]byte(`{"status": "error", "message": "payload is too big"}`))
+			return
+		}
+
+		r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 
 		next.ServeHTTP(w, r)
 	})
