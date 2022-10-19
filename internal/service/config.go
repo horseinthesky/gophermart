@@ -15,7 +15,7 @@ type Config struct {
 	TokenEngine    string        `env:"TOKEN_ENGINE" envDefault:"paseto"`
 	TokenDuration  time.Duration `env:"TOKEN_DURATION" envDefault:"24h"`
 	Key            string        `env:"SECRET" envDefault:"cuzyouwillneverknowthissecretkey"`
-	LogLevel       string        `env:"LOG_LEVEL" envDefault:"info"`
+	LogLevel       string        `env:"LOG_LEVEL" envDefault:"error"`
 	LogFormat      string        `env:"LOG_FORMAT" envDefault:"printf"`
 	Debug          bool
 }

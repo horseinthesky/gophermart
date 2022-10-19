@@ -56,6 +56,8 @@ func (s *Service) loginRequired(next http.Handler) http.Handler {
 				return
 			}
 
+			s.log.Errorf("failed to get token from cookie due to: %s", err)
+
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(`{"status": "error", "message": "failed to parse cookies"}`))
 			return
