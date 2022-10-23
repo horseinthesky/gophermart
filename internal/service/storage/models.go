@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -72,11 +71,11 @@ func (s *Status) UnmarshalJSON(data []byte) error {
 
 type User struct {
 	ID        int
-	Name      string `json:"login"`
-	Password  string
-	Passhash  string
-	Current   float32
-	Withdrawn float32
+	Name      string  `json:"login" gorm:"not null;unique"`
+	Password  string  `gorm:"-"`
+	Passhash  string  `gorm:"not null"`
+	Current   float32 `gorm:"type:float8;default:0"`
+	Withdrawn float32 `gorm:"type:float8;default:0"`
 }
 
 func (u *User) HashPassword() {
@@ -93,44 +92,24 @@ type (
 
 	Order struct {
 		ID           int       `json:"-"`
-		RegisteredBy string    `json:"-" db:"registered_by"`
-		Number       string    `json:"number"`
-		Status       Status    `json:"status"`
-		Accrual      float32   `json:"accrual,omitempty"`
+		RegisteredBy string    `json:"-" db:"registered_by" gorm:"not null;unique"`
+		Number       string    `json:"number" gorm:"not null"`
+		Status       Status    `json:"status" gorm:"not null"`
+		Accrual      float32   `json:"accrual,omitempty" gorm:"type:float8;default:0"`
 		UploadedAt   time.Time `json:"uploaded_at" db:"uploaded_at"`
 	}
 
 	AccrualOrder struct {
-		Order   string  `json:"order" gorm:"column:number"`
+		Order   string  `json:"order"`
 		Status  Status  `json:"status"`
 		Accrual float32 `json:"accrual,omitempty"`
 	}
 
 	Withdrawal struct {
 		ID           int       `json:"-"`
-		RegisteredBy string    `json:"-" db:"registered_by"`
-		Order        string    `json:"order" db:"orderid" gorm:"column:orderid"`
-		Sum          float32   `json:"sum"`
+		RegisteredBy string    `json:"-" db:"registered_by" gorm:"not null;unique"`
+		Order        string    `json:"order" db:"orderid" gorm:"column:orderid;not null"`
+		Sum          float32   `json:"sum" gorm:"type:float8;default:0"`
 		ProcessedAt  time.Time `json:"processed_at" db:"processed_at"`
-	}
-
-	Storage interface {
-		Init(context.Context) error
-		Check(context.Context) error
-
-		CreateUser(context.Context, User) error
-		GetUserByCreds(context.Context, User) (User, error)
-		GetUserByName(context.Context, string) (User, error)
-		GetUserBalance(context.Context, string) (Balance, error)
-
-		SaveOrder(context.Context, Order) error
-		UpdateOrder(context.Context, AccrualOrder) error
-		GetUserOrders(context.Context, string, string) ([]Order, error)
-		GetOrders(context.Context, []Status) ([]Order, error)
-
-		SaveWithdrawal(context.Context, Withdrawal) error
-		GetWithdrawals(context.Context, string, string) ([]Withdrawal, error)
-
-		Close()
 	}
 )

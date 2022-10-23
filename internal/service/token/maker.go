@@ -18,7 +18,7 @@ var makerMap = map[string]func(string) (Maker, error){
 func NewTokenMaker(engine string, key string) (Maker, error) {
 	makerCreator, ok := makerMap[engine]
 	if !ok {
-		return nil, fmt.Errorf(`token engine "%s" does not exist; use "jwt/paseto"`, engine)
+		return nil, fmt.Errorf(`token engine "%s" is not supported; use "jwt/paseto"`, engine)
 	}
 
 	maker, err := makerCreator(key)

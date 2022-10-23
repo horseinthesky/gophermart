@@ -25,6 +25,7 @@ func NewGORMDriver(uri string) (Storage, error) {
 }
 
 func (g *GORMDriver) Init(ctx context.Context) error {
+	g.conn.AutoMigrate(&User{}, &Order{}, &Withdrawal{})
 	return nil
 }
 

@@ -10,6 +10,7 @@ import (
 
 type Config struct {
 	RunAddress     string        `env:"RUN_ADDRESS" envDefault:"localhost:8000"`
+	DatabaseDriver string        `env:"DATABASE_DRIVER" envDefault:"sqlx"`
 	DatabaseURI    string        `env:"DATABASE_URI" envDefault:"postgresql://postgres@localhost:5432?sslmode=disable"`
 	AccrualAddress string        `env:"ACCRUAL_SYSTEM_ADDRESS" envDefault:"http://localhost:8080"`
 	TokenEngine    string        `env:"TOKEN_ENGINE" envDefault:"paseto"`
@@ -29,6 +30,7 @@ func PrepareConfig() (Config, error) {
 
 	flag.StringVar(&cfg.RunAddress, "a", cfg.RunAddress, "Socket to listen on")
 	flag.StringVar(&cfg.DatabaseURI, "d", cfg.DatabaseURI, "Database URI")
+	flag.StringVar(&cfg.DatabaseDriver, "o", cfg.DatabaseDriver, "Database driver: gorm/sqlx")
 	flag.StringVar(&cfg.AccrualAddress, "r", cfg.AccrualAddress, "Accrual system address")
 	flag.StringVar(&cfg.TokenEngine, "e", cfg.TokenEngine, "Token engine: jwt/paseto")
 	flag.DurationVar(&cfg.TokenDuration, "t", cfg.TokenDuration, "Token duration")
