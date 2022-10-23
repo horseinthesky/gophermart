@@ -24,7 +24,8 @@ type Service struct {
 }
 
 func New(cfg Config) (*Service, error) {
-	db, err := storage.NewDB(cfg.DatabaseURI)
+	// db, err := storage.NewSQLxDriver(cfg.DatabaseURI)
+	db, err := storage.NewGORMDriver(cfg.DatabaseURI)
 	if err != nil {
 		return nil, err
 	}

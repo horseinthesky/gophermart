@@ -34,7 +34,7 @@ func (s *Service) handleRegister() http.HandlerFunc {
 
 		user.HashPassword()
 
-		registeredUser, err := s.db.CreateUser(r.Context(), user)
+		err = s.db.CreateUser(r.Context(), user)
 		if err != nil {
 			if errors.Is(err, storage.ErrUserExists) {
 				s.log.Warnf("user %s tried to register but already exists in DB", user.Name)
@@ -51,7 +51,7 @@ func (s *Service) handleRegister() http.HandlerFunc {
 			return
 		}
 
-		token, _, err := s.tm.CreateToken(registeredUser.Name, s.config.TokenDuration)
+		token, _, err := s.tm.CreateToken(user.Name, s.config.TokenDuration)
 		if err != nil {
 			s.log.Errorf("failed to create new token due to: %s", err)
 
@@ -66,7 +66,7 @@ func (s *Service) handleRegister() http.HandlerFunc {
 				Value: token,
 			})
 
-		s.log.Infof("user %s successfully registered", registeredUser.Name)
+		s.log.Infof("user %s successfully registered", user.Name)
 
 		w.Write([]byte(`{"status": "success", "message": "authenticated"}`))
 	})

@@ -8,20 +8,20 @@ import (
 	_ "github.com/lib/pq"
 )
 
-type DB struct {
+type SQLxDriver struct {
 	conn *sqlx.DB
 }
 
-func NewDB(uri string) (Storage, error) {
+func NewSQLxDriver(uri string) (Storage, error) {
 	conn, err := sqlx.Open("postgres", uri)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open DB connection: %w", err)
 	}
 
-	return &DB{conn}, nil
+	return &SQLxDriver{conn}, nil
 }
 
-func (d *DB) Init(ctx context.Context) error {
+func (d *SQLxDriver) Init(ctx context.Context) error {
 	usersTable := `
 		CREATE TABLE IF NOT EXISTS users (
 			id serial PRIMARY KEY,
@@ -67,34 +67,31 @@ func (d *DB) Init(ctx context.Context) error {
 	return tx.Commit()
 }
 
-func (d *DB) Check(ctx context.Context) error {
+func (d *SQLxDriver) Check(ctx context.Context) error {
 	return d.conn.PingContext(ctx)
 }
 
-func (d *DB) Close() {
+func (d *SQLxDriver) Close() {
 	d.conn.Close()
 }
 
-func (d *DB) CreateUser(ctx context.Context, user User) (User, error) {
+func (d *SQLxDriver) CreateUser(ctx context.Context, user User) error {
 	existingUser := User{}
 
 	err := d.conn.GetContext(ctx, &existingUser, `SELECT * FROM users WHERE name=$1`, user.Name)
 	if err == nil {
-		return User{}, ErrUserExists
+		return ErrUserExists
 	}
 
 	_, err = d.conn.NamedExecContext(ctx, `INSERT INTO users (name, passhash) VALUES (:name, :passhash)`, user)
 	if err != nil {
-		return User{}, fmt.Errorf("failed to insert new user: %w", err)
+		return fmt.Errorf("failed to insert new user: %w", err)
 	}
 
-	registeredUser := User{}
-	err = d.conn.GetContext(ctx, &registeredUser, `SELECT * FROM users WHERE name=$1`, user.Name)
-
-	return registeredUser, err
+	return nil
 }
 
-func (d *DB) GetUserByCreds(ctx context.Context, user User) (User, error) {
+func (d *SQLxDriver) GetUserByCreds(ctx context.Context, user User) (User, error) {
 	existingUser := User{}
 
 	err := d.conn.GetContext(ctx, &existingUser, `SELECT * FROM users WHERE name=$1 AND passhash=$2`, user.Name, user.Passhash)
@@ -105,7 +102,7 @@ func (d *DB) GetUserByCreds(ctx context.Context, user User) (User, error) {
 	return existingUser, nil
 }
 
-func (d *DB) GetUserByName(ctx context.Context, userName string) (User, error) {
+func (d *SQLxDriver) GetUserByName(ctx context.Context, userName string) (User, error) {
 	user := User{}
 
 	err := d.conn.GetContext(ctx, &user, `SELECT * FROM users WHERE name=$1`, userName)
@@ -116,7 +113,7 @@ func (d *DB) GetUserByName(ctx context.Context, userName string) (User, error) {
 	return user, nil
 }
 
-func (d *DB) SaveOrder(ctx context.Context, order Order) error {
+func (d *SQLxDriver) SaveOrder(ctx context.Context, order Order) error {
 	existingOrder := Order{}
 
 	err := d.conn.GetContext(ctx, &existingOrder, `SELECT * FROM orders WHERE number=$1`, order.Number)
@@ -138,7 +135,7 @@ func (d *DB) SaveOrder(ctx context.Context, order Order) error {
 	return nil
 }
 
-func (d *DB) UpdateOrder(ctx context.Context, order AccrualOrder) error {
+func (d *SQLxDriver) UpdateOrder(ctx context.Context, order AccrualOrder) error {
 	_, err := d.conn.NamedExecContext(ctx, `UPDATE orders SET status = :status, accrual = :accrual WHERE number=:order`, order)
 	if err != nil {
 		return fmt.Errorf("failed to update order: %w", err)
@@ -158,7 +155,7 @@ func (d *DB) UpdateOrder(ctx context.Context, order AccrualOrder) error {
 	return nil
 }
 
-func (d *DB) GetUserOrders(ctx context.Context, userName string, orderField string) ([]Order, error) {
+func (d *SQLxDriver) GetUserOrders(ctx context.Context, userName string, orderField string) ([]Order, error) {
 	query := fmt.Sprintf(`SELECT * FROM orders WHERE registered_by=$1 ORDER BY %s`, orderField)
 
 	orders := []Order{}
@@ -171,7 +168,7 @@ func (d *DB) GetUserOrders(ctx context.Context, userName string, orderField stri
 	return orders, nil
 }
 
-func (d *DB) GetOrders(ctx context.Context, statuses []Status) ([]Order, error) {
+func (d *SQLxDriver) GetOrders(ctx context.Context, statuses []Status) ([]Order, error) {
 	query, args, err := sqlx.In(`SELECT * FROM orders WHERE status IN (?)`, statuses)
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare IN query: %w", err)
@@ -189,7 +186,7 @@ func (d *DB) GetOrders(ctx context.Context, statuses []Status) ([]Order, error) 
 	return orders, nil
 }
 
-func (d *DB) GetUserBalance(ctx context.Context, userName string) (Balance, error) {
+func (d *SQLxDriver) GetUserBalance(ctx context.Context, userName string) (Balance, error) {
 	user := User{}
 
 	err := d.conn.GetContext(ctx, &user, `SELECT * FROM users WHERE name=$1`, userName)
@@ -203,12 +200,12 @@ func (d *DB) GetUserBalance(ctx context.Context, userName string) (Balance, erro
 	}, nil
 }
 
-func (d *DB) SaveWithdrawal(ctx context.Context, withdrawal Withdrawal) error {
+func (d *SQLxDriver) SaveWithdrawal(ctx context.Context, withdrawal Withdrawal) error {
 	user := User{}
 
 	err := d.conn.GetContext(ctx, &user, `SELECT * FROM users WHERE name=$1`, withdrawal.RegisteredBy)
 	if err != nil {
-		return fmt.Errorf("failed to get user to withdraw from")
+		return ErrUserDoesNotExist
 	}
 
 	if user.Current < withdrawal.Sum {
@@ -228,7 +225,7 @@ func (d *DB) SaveWithdrawal(ctx context.Context, withdrawal Withdrawal) error {
 	return nil
 }
 
-func (d *DB) GetWithdrawals(ctx context.Context, userName string, orderField string) ([]Withdrawal, error) {
+func (d *SQLxDriver) GetWithdrawals(ctx context.Context, userName string, orderField string) ([]Withdrawal, error) {
 	query := fmt.Sprintf(`SELECT * FROM withdrawals WHERE registered_by=$1 ORDER BY %s`, orderField)
 
 	withdrawals := []Withdrawal{}

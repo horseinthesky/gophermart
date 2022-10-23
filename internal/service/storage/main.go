@@ -101,7 +101,7 @@ type (
 	}
 
 	AccrualOrder struct {
-		Order   string  `json:"order"`
+		Order   string  `json:"order" gorm:"column:number"`
 		Status  Status  `json:"status"`
 		Accrual float32 `json:"accrual,omitempty"`
 	}
@@ -109,7 +109,7 @@ type (
 	Withdrawal struct {
 		ID           int       `json:"-"`
 		RegisteredBy string    `json:"-" db:"registered_by"`
-		Order        string    `json:"order" db:"orderid"`
+		Order        string    `json:"order" db:"orderid" gorm:"column:orderid"`
 		Sum          float32   `json:"sum"`
 		ProcessedAt  time.Time `json:"processed_at" db:"processed_at"`
 	}
@@ -118,7 +118,7 @@ type (
 		Init(context.Context) error
 		Check(context.Context) error
 
-		CreateUser(context.Context, User) (User, error)
+		CreateUser(context.Context, User) error
 		GetUserByCreds(context.Context, User) (User, error)
 		GetUserByName(context.Context, string) (User, error)
 		GetUserBalance(context.Context, string) (Balance, error)
