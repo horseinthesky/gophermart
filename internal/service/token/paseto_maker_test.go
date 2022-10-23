@@ -5,13 +5,15 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
+	"gophermart/internal/service/utils"
 )
 
 func TestPasetoMaker(t *testing.T) {
-	maker, err := NewPasetoMaker(testSecret)
+	maker, err := NewPasetoMaker(utils.RandomString(32))
 	require.NoError(t, err)
 
-	username := testUser
+	username := utils.RandomUserName()
 	duration := time.Minute
 
 	issuedAt := time.Now()
@@ -26,16 +28,17 @@ func TestPasetoMaker(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, token)
 
+	require.NotZero(t, payload.Username)
 	require.Equal(t, username, payload.Username)
 	require.WithinDuration(t, issuedAt, payload.IssuedAt, time.Second)
 	require.WithinDuration(t, expiredAt, payload.ExpiredAt, time.Second)
 }
 
 func TestExpiredPasetoToken(t *testing.T) {
-	maker, err := NewPasetoMaker(testSecret)
+	maker, err := NewPasetoMaker(utils.RandomString(32))
 	require.NoError(t, err)
 
-	token, payload, err := maker.CreateToken(testUser, -time.Minute)
+	token, payload, err := maker.CreateToken(utils.RandomUserName(), -time.Minute)
 	require.NoError(t, err)
 	require.NotEmpty(t, token)
 	require.NotEmpty(t, payload)
