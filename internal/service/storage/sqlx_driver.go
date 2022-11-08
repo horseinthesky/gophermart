@@ -57,7 +57,6 @@ func (d *SQLxDriver) Init(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to create transaction: %w", err)
 	}
-
 	defer tx.Rollback()
 
 	tx.ExecContext(ctx, usersTable)
@@ -76,19 +75,25 @@ func (d *SQLxDriver) Close() {
 }
 
 func (d *SQLxDriver) CreateUser(ctx context.Context, user User) error {
+	tx, err := d.conn.Beginx()
+	if err != nil {
+		return fmt.Errorf("failed to create transaction: %w", err)
+	}
+	defer tx.Rollback()
+
 	existingUser := User{}
 
-	err := d.conn.GetContext(ctx, &existingUser, `SELECT * FROM users WHERE name=$1`, user.Name)
+	err = tx.GetContext(ctx, &existingUser, `SELECT * FROM users WHERE name=$1`, user.Name)
 	if err == nil {
 		return ErrUserExists
 	}
 
-	_, err = d.conn.NamedExecContext(ctx, `INSERT INTO users (name, passhash) VALUES (:name, :passhash)`, user)
+	_, err = tx.NamedExecContext(ctx, `INSERT INTO users (name, passhash) VALUES (:name, :passhash)`, user)
 	if err != nil {
 		return fmt.Errorf("failed to insert new user: %w", err)
 	}
 
-	return nil
+	return tx.Commit()
 }
 
 func (d *SQLxDriver) GetUserByCreds(ctx context.Context, user User) (User, error) {
@@ -114,9 +119,15 @@ func (d *SQLxDriver) GetUserByName(ctx context.Context, userName string) (User, 
 }
 
 func (d *SQLxDriver) SaveOrder(ctx context.Context, order Order) error {
+	tx, err := d.conn.Beginx()
+	if err != nil {
+		return fmt.Errorf("failed to create transaction: %w", err)
+	}
+	defer tx.Rollback()
+
 	existingOrder := Order{}
 
-	err := d.conn.GetContext(ctx, &existingOrder, `SELECT * FROM orders WHERE number=$1`, order.Number)
+	err = tx.GetContext(ctx, &existingOrder, `SELECT * FROM orders WHERE number=$1`, order.Number)
 	if err == nil {
 		if existingOrder.RegisteredBy == order.RegisteredBy {
 			return ErrOrderAlreadyRegisteredByUser
@@ -127,32 +138,38 @@ func (d *SQLxDriver) SaveOrder(ctx context.Context, order Order) error {
 		}
 	}
 
-	_, err = d.conn.NamedExecContext(ctx, `INSERT INTO orders (registered_by, number, status, uploaded_at) VALUES (:registered_by, :number, :status, :uploaded_at)`, order)
+	_, err = tx.NamedExecContext(ctx, `INSERT INTO orders (registered_by, number, status, uploaded_at) VALUES (:registered_by, :number, :status, :uploaded_at)`, order)
 	if err != nil {
 		return fmt.Errorf("failed to insert new order: %w", err)
 	}
 
-	return nil
+	return tx.Commit()
 }
 
 func (d *SQLxDriver) UpdateOrder(ctx context.Context, order AccrualOrder) error {
-	_, err := d.conn.NamedExecContext(ctx, `UPDATE orders SET status = :status, accrual = :accrual WHERE number=:order`, order)
+	tx, err := d.conn.Beginx()
+	if err != nil {
+		return fmt.Errorf("failed to create transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	_, err = tx.NamedExecContext(ctx, `UPDATE orders SET status = :status, accrual = :accrual WHERE number=:order`, order)
 	if err != nil {
 		return fmt.Errorf("failed to update order: %w", err)
 	}
 
 	updatedOrder := Order{}
-	err = d.conn.GetContext(ctx, &updatedOrder, `SELECT * FROM orders WHERE number=$1`, order.Order)
+	err = tx.GetContext(ctx, &updatedOrder, `SELECT * FROM orders WHERE number=$1`, order.Order)
 	if err != nil {
 		return fmt.Errorf("failed to get updated order: %w", err)
 	}
 
-	_, err = d.conn.NamedExecContext(ctx, `UPDATE users SET current = users.current + :accrual WHERE name=:registered_by`, updatedOrder)
+	_, err = tx.NamedExecContext(ctx, `UPDATE users SET current = users.current + :accrual WHERE name=:registered_by`, updatedOrder)
 	if err != nil {
 		return fmt.Errorf("failed to update order: %w", err)
 	}
 
-	return nil
+	return tx.Commit()
 }
 
 func (d *SQLxDriver) GetUserOrders(ctx context.Context, userName string, orderField string) ([]Order, error) {
@@ -201,9 +218,15 @@ func (d *SQLxDriver) GetUserBalance(ctx context.Context, userName string) (Balan
 }
 
 func (d *SQLxDriver) SaveWithdrawal(ctx context.Context, withdrawal Withdrawal) error {
+	tx, err := d.conn.Beginx()
+	if err != nil {
+		return fmt.Errorf("failed to create transaction: %w", err)
+	}
+	defer tx.Rollback()
+
 	user := User{}
 
-	err := d.conn.GetContext(ctx, &user, `SELECT * FROM users WHERE name=$1`, withdrawal.RegisteredBy)
+	err = tx.GetContext(ctx, &user, `SELECT * FROM users WHERE name=$1`, withdrawal.RegisteredBy)
 	if err != nil {
 		return ErrUserDoesNotExist
 	}
@@ -212,17 +235,17 @@ func (d *SQLxDriver) SaveWithdrawal(ctx context.Context, withdrawal Withdrawal) 
 		return ErrNotEnoughPoints
 	}
 
-	_, err = d.conn.NamedExecContext(ctx, `UPDATE users SET current = users.current - :sum, withdrawn = users.withdrawn + :sum WHERE name = :registered_by`, withdrawal)
+	_, err = tx.NamedExecContext(ctx, `UPDATE users SET current = users.current - :sum, withdrawn = users.withdrawn + :sum WHERE name = :registered_by`, withdrawal)
 	if err != nil {
 		return fmt.Errorf("failed to update user balance: %w", err)
 	}
 
-	_, err = d.conn.NamedExecContext(ctx, `INSERT INTO withdrawals (registered_by, orderid, sum, processed_at) VALUES (:registered_by, :orderid, :sum, :processed_at)`, withdrawal)
+	_, err = tx.NamedExecContext(ctx, `INSERT INTO withdrawals (registered_by, orderid, sum, processed_at) VALUES (:registered_by, :orderid, :sum, :processed_at)`, withdrawal)
 	if err != nil {
 		return fmt.Errorf("failed to insert new withdraw: %w", err)
 	}
 
-	return nil
+	return tx.Commit()
 }
 
 func (d *SQLxDriver) GetWithdrawals(ctx context.Context, userName string, orderField string) ([]Withdrawal, error) {
