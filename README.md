@@ -41,11 +41,11 @@ go build ./cmd/gophermart/
 ```
 ~/go-autotests/bin/gophermarttest \
   -test.v -test.run=^TestGophermart$ \
-  -gophermart-binary-path=./gophermart \
+  -gophermart-binary-path=./cmd/gophermart/gophermart \
   -gophermart-host=localhost \
   -gophermart-port=8080 \
   -gophermart-database-uri="postgresql://postgres@localhost:5432?sslmode=disable" \
-  -accrual-binary-path=cmd/accrual/accrual_linux_amd64 \
+  -accrual-binary-path=./cmd/accrual/accrual_linux_amd64 \
   -accrual-host=localhost \
   -accrual-port=8000 \
   -accrual-database-uri="postgresql://postgres@localhost:5432?sslmode=disable"
