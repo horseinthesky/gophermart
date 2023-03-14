@@ -1,43 +1,55 @@
-# go-musthave-diploma-tpl
+# 🔄 gophermart
 
-Шаблон репозитория для индивидуального дипломного проекта курса «Go-разработчик»
+Cumulative loyalty system.
 
-# Начало работы
+## ✨ Features
 
-1. Склонируйте репозиторий в любую подходящую директорию на вашем компьютере.
-2. В корне репозитория выполните команду `go mod init <name>` (где `<name>` — адрес вашего репозитория на GitHub без
-   префикса `https://`) для создания модуля
+- 🔒 Register and authenticate with [JWT](https://jwt.io/) or [PASETO](https://paseto.io/) token
+- 💻 Add new orders
+- 📚 Maintain a list of user's orders
+- 📋 Maintain user loyalty account balance
+- 🔌 Verify accepted order numbers through the loyalty points system
+- 📊 Get accrual of the required reward for each matching order number to the user's loyalty account
 
-# Обновление шаблона
+Check out the `SPECIFICATION.md` file for business logic details.
 
-Чтобы иметь возможность получать обновления автотестов и других частей шаблона, выполните команду:
+## 📊 AutoTests
+
+Project autotests are available here:
+https://github.com/Yandex-Practicum/go-autotests/tree/main/cmd/gophermarttest
+
+### Updates
+
+To be able to get updates for the test suite run:
 
 ```
 git remote add -m master template https://github.com/yandex-praktikum/go-musthave-diploma-tpl.git
 ```
 
-Для обновления кода автотестов выполните команду:
+To update the test suite source code run:
 
 ```
 git fetch template && git checkout template/master .github
 ```
 
-Затем добавьте полученные изменения в свой репозиторий.
+Then add changes to your repo.
 
-## Код тестов
-https://github.com/Yandex-Practicum/go-autotests/tree/main/cmd/gophermarttest
+### Run
 
-В корне репы собираем бинарь для тестов:
+To build a test suite binary run:
+
 ```
 make
 ```
 
-Далее собираем свой пакет, например, так:
+Next build gophermart with:
+
 ```
 go build ./cmd/gophermart/
 ```
 
-Запускаем тест командой из Github actions вида:
+Run tests with the following command:
+
 ```
 ~/go-autotests/bin/gophermarttest \
   -test.v -test.run=^TestGophermart$ \
